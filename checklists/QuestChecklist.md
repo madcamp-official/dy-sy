@@ -1,0 +1,11 @@
+# Quest 체크리스트
+- [ ] Head Tracking
+- [ ] 양손 Tracking
+- [ ] 검 위치
+- [ ] 화염구 Spawn 위치
+- [ ] 이동
+- [ ] Snap Turn
+- [ ] HUD 거리
+- [ ] 성능
+- [ ] 멀미
+- [ ] 빌드 백업
