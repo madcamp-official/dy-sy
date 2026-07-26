@@ -1,0 +1,13 @@
+# Damage Done
+- [ ] BPI_Damageable 존재
+- [ ] Dummy가 Interface 구현
+- [ ] MaxHealth 100
+- [ ] CurrentHealth 100
+- [ ] Interface 피해 호출
+- [ ] 1회 후 50
+- [ ] 2회 후 Destroy
+- [ ] Compile 성공
+- [ ] Save 완료
+- [ ] L_Test 검증
+- [ ] 임시 테스트 정리
+- [ ] 상태 문서 갱신

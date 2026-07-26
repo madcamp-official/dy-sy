@@ -1,0 +1,12 @@
+# After Task
+- [ ] 수정 에셋 확인
+- [ ] Compile
+- [ ] Save
+- [ ] Output Log
+- [ ] PIE
+- [ ] 요청 기능 검증
+- [ ] 회귀 테스트
+- [ ] MEMORY 갱신
+- [ ] PROJECT_STATUS 갱신
+- [ ] Git commit 제안
+- [ ] 다음 작업 자동 진행 안 함
