@@ -42,7 +42,7 @@
 - XRMannequins
 
 ## 현재 미완성
-- Player HP / Death / Restart
+- Player Death / Restart
 - Sword
 - Fireball
 - Enemy Combat
@@ -97,3 +97,23 @@
 - PIE 종료 후 임시 Delay/인터페이스 호출 노드 4개를 삭제
 - 임시 노드 제거 후 두 Blueprint 재Compile 및 Save 성공
 - Damage System 완료
+
+## 2026-07-26 VR Player Health 완료 검증
+- `/Game/XRFramework/Blueprints/BP_XRPawn`이 `BPI_Damage2`를 실제 구현
+- `MaxHealth`와 `CurrentHealth`는 Blueprint Float이며 기본값은 각각 100
+- Event `ApplyDamage` 저장 로직:
+  - `CurrentHealth - Damage`
+  - `Clamp(Float)` Min 0, Max `MaxHealth`
+  - 결과를 `CurrentHealth`에 저장
+- ApplyDamage 경로에 `DestroyActor` 없음
+- `BP_XRPawn` Compile 및 Save 성공
+- L_Test PIE에서 인터페이스 호출 50을 두 번 실행하고 런타임 상태를 직접 확인:
+  - 시작 `CurrentHealth=100`
+  - 첫 호출 후 `CurrentHealth=50`
+  - 두 번째 호출 후 `CurrentHealth=0`
+  - `BP_XRPawn_C_0`가 0 Health에서도 PIE 월드에 계속 존재
+- PIE 종료 후 임시 Delay/인터페이스 호출 노드 4개 삭제
+- 기존 BeginPlay 실행선을 원래 `K2Node_IfThenElse_4`에 재연결
+- 임시 로직 제거 후 `BP_XRPawn` 재Compile 및 Save 성공
+- VR Preview 또는 실제 헤드셋 검증은 수행하지 않음
+- Player Health 완료. Death와 Restart는 아직 구현하지 않음
