@@ -1,28 +1,26 @@
-# Next Task — Fireball Combat
+# Next Tasks
 
-Begin only after Sword Combat is complete and explicitly approved.
+Begin these tasks only after the Player Magic and Sword VFX Package is compiled, saved, and verified in `L_Test` PIE.
 
-## Goal
-Implement left-hand fireball combat and connect fireball hits to the verified Damage System.
+## Ordered follow-up work
 
-## Preconditions
-- Damage System complete
-- VR Player Health complete
-- Sword Combat complete
-- Git checkpoint created
+1. Player death and restart
+2. HUD
+3. Boss combat
+4. Victory and defeat
+5. Quest build and device test
 
-## Scope
-- Inspect the saved left-controller and fireball assets before editing.
-- Use only assets that actually exist in the project.
-- Preserve existing XR locomotion, tracking, player health, and sword behavior.
-- Use event-driven spawning, collision, and cleanup.
-- Call `BPI_Damage2.ApplyDamage` on valid damageable targets.
-- Prevent unintended repeated damage.
-- Prioritize Quest performance.
+## Transition rule
 
-## Restrictions
-- Do not recreate, replace, delete, or rename existing XR assets.
-- Do not put core combat logic in the Level Blueprint.
-- Do not rewrite existing locomotion or controller tracking.
-- Do not continue automatically to Enemy Combat.
-- Do not claim completion without Compile, Save, and PIE evidence.
+- Do not mark Player Magic or Sword VFX complete without saved assets, successful Blueprint compile results, and PIE evidence.
+- Do not start a follow-up task automatically.
+- Preserve completed XR tracking, locomotion, grabbing, player health, and Damage System behavior.
+
+
+## Current-package gate
+
+The independent projectile assets now exist, but the current package is not complete. Do not advance to player death/restart until input spawning, sword integration, and full PIE validation are unblocked and pass.
+
+## Fireball validation gate
+
+Before advancing the current package, verify repeated physical VR fireball shots spawn 25 cm in front of the left aim, follow aim direction, remain uniformly scaled at 0.5, and travel normally.
