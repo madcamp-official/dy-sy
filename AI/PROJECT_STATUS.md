@@ -1,72 +1,71 @@
 # Project Status
 
-## Overall progress
+## 2026-07-27 Locomotion / Enemy Visibility Verification
+- [x] Disabled right-thumbstick turning by removing all `IA_Turn` mappings from `IMC_Default`.
+- [x] Preserved normal HMD tracking and existing hand, grab, and sword systems.
+- [x] Repaired the missing execution wire in `BP_XRPawn.ApplySmoothLocomotion`.
+- [x] Verified HMD-yaw-relative forward/backward/strafe calculation, pitch ignored through `Normalize2D`, speed 300 cm/s.
+- [x] Reused and exposed one existing `BP_Enemy` in `L_Test`; no enemy combat logic changed.
+- [x] Compiled, saved, and ran in-process PIE without a new Blueprint runtime error.
+- [ ] Perform final physical Quest controller test for stick direction/deadzone and confirm right stick produces no turn.
 
-| System | Status | Evidence / next requirement |
-|---|---|---|
-| Damage System (`BPI_Damage2`) | Verified complete | Saved compile and L_Test PIE evidence: 100 → 50 → destroyed on the damage dummy. |
-| Player health | Verified complete | Saved compile and L_Test PIE evidence: 100 → 50 → 0 while the pawn remains alive. |
-| XR pawn spawn | Verified complete | `SpawnCollisionHandlingMethod=AlwaysSpawn`; pawn and equipped sword were observed in PIE. |
-| Left-stick smooth locomotion | Verified complete in editor | Graph compiled and in-process PIE started without new runtime errors; physical Quest input remains unverified. |
-| Right-stick turning disabled | Verified complete structurally | `IA_Turn` has no active mappings; physical controller confirmation remains. |
-| L_Test enemy visibility | Verified complete in editor | Existing enemy reused and visible; enemy combat was not modified. |
-| Sword Combat | Blocked | `BP_Sword` exists, but prior inspection found `TrySwordDamage` lacks a valid execution/damage path; fast-hit damage PIE evidence is absent. |
-| Player Magic and Sword VFX Package | In progress — partially implemented | `BP_Fireball` and `BP_SwordWave` are created, compiled, and saved. PIE behavior is not verified; input, charge, trail, and sword integration remain blocked. |
-| Player death and restart | Not started | Follows the current VFX package. |
-| HUD | Not started | Follows player death and restart. |
-| Boss combat | Not started | Boss patterns and validation remain. |
-| Victory and defeat | Not started | Requires game-state flow and restart validation. |
-| Quest build and device test | Not started | Requires Android/Quest toolchain and physical device validation. |
+## 현재 단계
+P0 Foundation
 
-## Current focus
+## 작업 포커스
+- 완료: Damage System
+- 완료: VR Player Health
+- CURRENT_TASK: Sword Combat
+- NEXT_TASK: Fireball Combat
 
-**Player Magic and Sword VFX Package**
+## 현재 차단 사항
+- Damage System 차단 해제: `BPI_Damage2` 수동 구현과 PIE `100 → 50 → Destroy` 검증 완료
+- 현재 Damage System 관련 차단 사항 없음
+- `BP_DamageDummy`는 `BPI_Damageable`이 아니라 `BPI_Damage2`를 구현하며, 요청된 `BPI_Damageable` 에셋은 현재 로드되지 않음
+- `BP_Sword.TrySwordDamage`의 Entry 실행선이 속도 Branch에 연결되지 않았고 Branch True 뒤에 `BPI_Damage2.ApplyDamage` 호출이 없어 실제 피해 실행 경로가 없음
+- L_Test PIE에서 느린 접촉 무피해는 확인했으나 7회 빠른 재진입 후에도 Dummy Health가 100으로 유지됨
+- L_Test PlayerStart를 `[-300, 0, 110]`으로 복구하고 `BP_XRPawn.SpawnCollisionHandlingMethod=AlwaysSpawn`으로 보강; 기존 충돌 위치와 기본 PlayerStart 양쪽 PIE에서 Pawn과 EquippedSword 정상 생성 확인
+- Sword Combat 완료 전 `TrySwordDamage` 실행/피해 경로 수정, Compile, PIE `100 → 85`, continuous-overlap 중복 방지, 반복 타격 Destroy 재검증 필요
 
-Scope:
+## P0
+- [ ] Git `dy-sy` 구성 의도 확인
+- [x] Unreal MCP 라이브 연결 확인
+- [x] Damage System 완료
+- [x] Player HP
+- [ ] Player Death / Restart
+- [ ] Sword Combat
+- [ ] Fireball Combat
+- [ ] Enemy Combat
+- [ ] Boss Slash
+- [ ] Boss Slam
+- [ ] Player HUD
+- [ ] Boss HUD
+- [ ] Win / Lose / Restart
+- [ ] Quest Build
+- [ ] Quest Device Test
 
-- left-hand magic charge VFX
-- `BP_Fireball`
-- sword trail
-- `BP_SwordWave`
-- combat hit effects
+## P1
+- [ ] Wave Manager
+- [ ] Parry
+- [ ] Boss Phase
+- [ ] VFX
+- [ ] Audio
+- [ ] Haptics
 
-Current status is planning/inspection only. Nothing in this package is marked complete.
+## P2
+- [ ] Ultimate
+- [ ] Score
+- [ ] Voice
+- [ ] Extra Enemy Variant
 
-## 2026-07-27 live Unreal MCP inspection
+## 완료 기준
+각 항목은 Compile, Save, PIE 검증, 회귀 테스트가 끝나야 체크합니다.
 
-- Unreal MCP connection: available.
-- PIE running: false.
-- Open assets: none.
-- Content Browser path: `/Game/Free_Magic/VFX_Niagara`.
-- Existing and clean: `BP_XRPawn`, `BP_Sword`, `BPI_Damage2`, and all five required Niagara systems.
-- Missing: `/Game/Blueprints/Magic/BP_Fireball`, `/Game/Blueprints/Weapons/BP_SwordWave`.
-- `BP_XRPawn` components include the existing tracked hands/controllers and `EquippedSword`, but no package Niagara component.
-- `BP_Sword` components are the existing `KRYVEN_BLADE` mesh and `SwordCollision`; no trail component.
-- `/Game/Maps/L_Test` exists but was dirty. This documentation-only task did not save or alter it.
-
-## Status definitions
-
-- **Verified complete:** compiled, saved, and supported by relevant PIE evidence.
-- **In progress:** active scope is defined or partially implemented, but completion evidence is missing.
-- **Not started:** no implementation evidence exists.
-- **Blocked:** implementation or verification cannot complete until a known defect or dependency is resolved.
-
-
-## 2026-07-27 Independent projectile update
-
-- [x] BP_Fireball created, compiled with warnings as errors, and saved.
-- [x] BP_SwordWave created, compiled with warnings as errors, and saved.
-- [x] Required projectile/travel and hit Niagara assets assigned.
-- [x] Structural duplicate-damage guards implemented.
-- [ ] PIE movement, collision damage, visible hit effect, and destruction evidence — temporary unsaved instances were not observable in the PIE world; Fireball DamageDummy health remained 100.
-- [ ] BP_XRPawn input spawning and left-hand integration — blocked by existing graph inspection limits.
-- [ ] BP_Sword trail and sword-wave spawning integration — blocked by existing graph inspection limits.
-- Maps and restricted Blueprints were not saved.
-
-## 2026-07-27 Fireball spawn/size correction
-
-- [x] Spawn transform follows MotionControllerLeftAim with a deterministic 25 cm forward offset.
-- [x] NS_Free_Magic_Attack2 component scale verified at 0.5 uniform.
-- [x] Collision radius reduced to 14 cm.
-- [x] BP_XRPawn and BP_Fireball compile/save passed; PIE had no runtime error or Accessed None.
-- [ ] Physical VR firing validation for repeated placement, aim direction, visible size, and travel.
+## 2026-07-27 Left Joystick Locomotion Side Task
+- [x] 왼쪽 스틱 Axis2D 매핑 및 Dead Zone `0.2`
+- [x] HMD 카메라 Yaw 기준 Smooth Locomotion `300 cm/s`
+- [x] 전진·후진·좌우 스트레이프 그래프 구현
+- [x] 기존 Snap Turn 그래프 유지 및 오른쪽 스틱 X축 재매핑
+- [x] `BP_XRPawn` Compile/Save 및 L_Test 인프로세스 PIE 시작
+- [ ] 물리 OpenXR 컨트롤러와 손 추적 회귀 테스트
+- 이 작업에서 Combat, Sword, Damage, Enemy 에셋은 수정하지 않음
