@@ -151,3 +151,81 @@
 - 모든 임시 PIE validation 함수, Delay, DoOnce, 호출 노드 제거
 - 최종 PIE 종료, `BP_Sword`, `BP_XRPawn`, `L_Test` dirty state 없음
 - 남은 필수 검증: VR Preview 또는 실제 헤드셋에서 오른손 검을 `BP_DamageDummy`에 threshold 이상 속도로 한 번 휘둘러 `CurrentHealth 100 → 85`를 확인하고, 접촉을 유지하는 동안 추가 감소가 없는지 확인
+
+## 2026-07-27 Sword Combat 저장 상태 및 PIE 재검증
+- Unreal MCP 라이브 연결로 `/Game/Maps/L_Test`와 관련 Blueprint를 재검사
+- 저장 상태:
+  - `/Game/Blueprints/Enemies/BP_DamageDummy`는 `BPI_Damageable`을 구현하지 않음
+  - 요청된 `/Game/Blueprints/Interfaces/BPI_Damageable` 에셋은 로드되지 않았음
+  - 실제 구현 인터페이스는 `/Game/Blueprints/Interfaces/BPI_Damage2`
+  - `BP_DamageDummy.MaxHealth=100`, `CurrentHealth=100`
+  - `BP_Sword.SwordDamage=15`, `MinimumDamageSpeed=100`
+  - `L_Test`에 `BP_DamageDummy_C_0` 1개 존재
+  - `BP_XRPawn`의 `EquippedSword` Child Actor Component가 `HandRight` 아래에 있고 Child Actor Class는 `BP_Sword`
+- `BP_Sword` 그래프 결함:
+  - `ActorBeginOverlap`은 `TrySwordDamage(OtherActor)`를 호출
+  - `TrySwordDamage` 함수 Entry 실행 핀이 속도 판정 Branch에 연결되지 않음
+  - Branch True 뒤에 `BPI_Damage2.ApplyDamage` 호출이 없음
+  - 따라서 현재 저장 상태에는 실제 Sword Damage 실행 경로가 없음
+- L_Test PIE 검증:
+  - 기본 `PlayerStart` `[-100, 0, 110]`에서는 충돌로 `BP_XRPawn` 스폰 실패
+  - 에셋 변경 없이 PIE start transform을 `[-300, 0, 250]`으로 오버라이드해 Pawn과 Sword 스폰 성공
+  - Sword와 Dummy가 겹치고 `SwordSpeed=0`일 때 `CurrentHealth=100` 유지: 느린 접촉 무피해 확인
+  - Pawn을 외부 위치와 Sword/Dummy 겹침 위치 사이로 빠르게 왕복하여 7회 재진입
+  - 각 재진입 뒤 Dummy `CurrentHealth=100`; 15 피해, 중복 방지, 누적 파괴는 검증 실패
+  - PIE 런타임 인스턴스의 `MinimumDamageSpeed` 임시 변경은 MCP 프로퍼티 쓰기가 거부되어 적용되지 않음
+- 정리:
+  - 임시 Blueprint 노드는 추가하지 않음
+  - PIE 종료
+  - `BPI_Damage2`, `BP_DamageDummy`, `BP_Sword`, `BP_XRPawn` warnings-as-errors Compile 성공
+  - Blueprint compile error, Accessed None, Blueprint runtime error 없음
+  - `BP_Sword` Compile 후 Save 성공
+  - 관련 에셋 최종 dirty state 없음
+- Sword Combat은 미완료. 다음 작업으로 진행하지 않음
+
+## 2026-07-27 L_Test VR Pawn 스폰 충돌 수정
+- 증상: 기본 PIE에서 오른손과 검이 보이지 않음
+- 원인:
+  - 기존 `PlayerStart` 위치 `[-100, 0, 110]`에서 충돌 발생
+  - `BP_XRPawn_C` 스폰 실패로 Pawn 소속 오른손과 `EquippedSword` Child Actor도 생성되지 않음
+- 최소 수정:
+  - `/Game/Maps/L_Test`의 `PlayerStart`만 `[-300, 0, 110]`으로 이동
+  - 다른 액터, Blueprint, 컴포넌트는 수정하지 않음
+- 검증:
+  - 먼저 PIE start transform 오버라이드로 후보 위치에서 `BP_XRPawn_C_0`와 `EquippedSword_GEN_VARIABLE_BP_Sword_C_CAT_0` 생성 확인
+  - PlayerStart 이동 및 L_Test Save 후 오버라이드 없는 기본 PIE 재실행
+  - 기본 PIE에서 `BP_XRPawn_C_0`와 `EquippedSword_GEN_VARIABLE_BP_Sword_C_CAT_0` 정상 생성 확인
+  - 새 PIE 실행에서는 Pawn spawn collision이 재발하지 않음
+  - PIE 종료 및 `/Game/Maps/L_Test` dirty state 없음 확인
+
+## 2026-07-27 VR Pawn 스폰 충돌 재발 및 보강
+- 증상 재발 시 `/Game/Maps/L_Test`의 PlayerStart가 `[-110, 140, 110]`으로 변경되어 있었음
+- 기본 PIE에서 `BP_XRPawn_C`가 해당 위치 충돌로 다시 스폰 실패했고 손과 검이 생성되지 않음
+- 런타임 가시성 검사:
+  - `HandRight`: Visible=true, HiddenInGame=false, `SKM_MannyXR_right` 설정 정상
+  - `EquippedSword`: Visible=true, HiddenInGame=false, Child Actor Class=`BP_Sword`
+  - `BP_Sword.KRYVEN_BLADE`: Visible=true, HiddenInGame=false, `SM_KRYVEN_BLADE` 설정 정상
+- 수정:
+  - PlayerStart를 검증된 `[-300, 0, 110]`으로 다시 이동하고 L_Test Save
+  - `/Game/XRFramework/Blueprints/BP_XRPawn`의 `SpawnCollisionHandlingMethod`를 `AdjustIfPossibleButDontSpawnIfColliding`에서 `AlwaysSpawn`으로 변경
+  - BP_XRPawn warnings-as-errors Compile 및 Save 성공
+- 검증:
+  - 이전 충돌 위치 `[-110, 140, 110]` PIE start override에서도 `BP_XRPawn_C_0`와 `EquippedSword_GEN_VARIABLE_BP_Sword_C_CAT_0` 생성 성공
+  - 기본 PlayerStart PIE에서도 Pawn과 Sword 생성 성공
+  - PIE 종료, L_Test와 BP_XRPawn dirty state 없음
+
+## 2026-07-27 Left Joystick Smooth Locomotion
+- 수정 범위: `/Game/XRFramework/Blueprints/BP_XRPawn`, `/Game/XRFramework/Input/Actions/IA_Move`, `/Game/XRFramework/Input/IMC_Default`
+- `IA_Move`를 Axis2D로 변경하고 Dead Zone 하한을 `0.2`로 설정; 기존 positive-only modifier 제거
+- Valve Index, Oculus Touch, Vive, PICO의 왼쪽 스틱 2D를 `IA_Move`에 매핑
+- 기존 Snap Turn은 유지하면서 `IA_Turn`을 각 기기의 오른쪽 스틱 X축으로 재매핑
+- `BP_XRPawn.ApplySmoothLocomotion(MoveAxis)` 추가:
+  - PlayerCameraManager 카메라 회전 기준
+  - Forward/Right 벡터를 `Normalize2D`하여 카메라 Pitch 무시
+  - 전진·후진·좌우 스트레이프 지원
+  - `300 cm/s * World Delta Seconds` 오프셋 적용
+  - `AddActorWorldOffset` Sweep 사용
+- `IA_Move.Triggered`를 새 이동 함수에 연결하고, 동일 입력의 기존 텔레포트 실행 연결만 분리함. 텔레포트 함수 자체는 삭제하지 않음
+- `BP_XRPawn` warnings-as-errors Compile 성공, 관련 에셋 3개 Save 성공
+- L_Test 인프로세스 PIE 시작 성공, 새 Blueprint Runtime Error/Accessed None 없음
+- MCP는 실제 OpenXR 축 입력을 주입할 수 없고 로그에 `XR_ERROR_INITIALIZATION_FAILED` 기록이 있어, 물리 스틱 방향·Snap Turn·실시간 손 추적 회귀 검증은 실기기에서 추가 확인 필요
