@@ -4,7 +4,8 @@
 (이번 세션 추가) BP_Enemy/BP_Goblin 이동·비주얼·UI 개선 세션 완료:
 1. BP_Goblin 메시 회전 버그 수정 (Roll -90으로 BP_Enemy와 일치)
 2. ChaseTick 이동 로직을 AddMovementInput → AddActorWorldOffset 기반으로 전면 재작성 (양쪽 블루프린트 모두), PromotableOperator 와일드카드 체이닝 버그를 새로 발견/회피
-3. 적 머리 위 체력바(WBP_EnemyHealthBar + WidgetComponent) 추가 — 비주얼은 확인됨, 실시간 퍼센트 갱신은 MCP 툴링 한계로 미완성(아래 상세 참고)
+3. 적 머리 위 체력바(WBP_EnemyHealthBar + WidgetComponent) 추가 — **후속 세션에서 실시간 갱신 문제 해결함**: 이전 세션이 이미 자가-갱신형 로직(WBP_EnemyHealthBar:SetHealthPercent 함수가 Self→GetOuterObject→CastToWidgetComponent→GetOwner→CastToBP_Enemy/CastToBP_Goblin 분기로 자기 소유 액터의 CurrentHealth/MaxHealth를 직접 읽어와 ProgressBar.SetPercent 호출)와 EventGraph의 Construct 이벤트+0.2초 반복 타이머(SetTimerByFunctionName)까지 다 만들어놨었는데, EventGraph에서 Construct 직후 SetHealthPercent를 직접 호출하는 노드의 "self" 입력 핀이 연결이 안 되어 있었음 (이번 세션에서 여러 번 발견한 그 패턴 — 로컬 함수 호출 노드의 self 핀은 create_node로 만들면 자동 연결 안 됨). Self 레퍼런스 노드를 연결해서 해결. Compile/런타임 에러 없음 확인. 단, 실제 데미지를 넣어서 퍼센트가 줄어드는 것 자체는 이 MCP로는 확인 못 함(살아있는 인스턴스에 데미지를 가할 방법이 없음) — 로직 구조상 정상 작동해야 하나 사람이 실제로 때려보고 확인 필요
+   - 참고: 처음에 BP_Enemy/BP_Goblin의 HandleDamage에서 캐스트된 위젯 인스턴스의 멤버 변수(HealthProgressBar)를 직접 Get 하는 노드를 만들려 했는데 실패함 — "Variables|WBP_EnemyHealthBar|GetHealthProgressBar" 같은 "다른 블루프린트 인스턴스의 멤버 변수를 외부에서 Get" 하는 타입의 노드는 find_node_types로는 검색되는데 create_node로는 생성이 안 됨("does not exist" 에러). 반면 **같은 블루프린트 자기 자신의 컨텍스트에서는 동일한 노드가 정상 생성됨** — 이 구분이 중요: 외부 인스턴스의 멤버 변수 Get 노드는 이 MCP로 못 만들고, 그 대신 위 방식처럼 대상 블루프린트 자신에게 함수를 만들어서 호출하는 패턴(pull 방식)을 써야 함
 4. ABP_Goblin(애니메이션 블루프린트) 시도 — 부분적으로 가능하나 TargetSkeleton 설정 불가로 포기, 생성한 에셋 삭제함
 Git Commit 대기 중 (이전 07_WaveSystem 단계와 함께).
 
