@@ -145,3 +145,16 @@ Run PIE in `/Game/Maps/L_Test` only after all feature assets compile and save su
 - Sword overlap damage remains connected and uses its existing 100 cm/s minimum swing speed.
 - All four affected Blueprints compile and are saved.
 - Physical Quest/VR Preview confirmation remains pending.
+
+## 2026-07-28 Enemy animation integration
+
+- Goblin locomotion now uses the existing `ABP_Goblin`.
+- Orc Enemy uses looping `axe_run` for movement and one-shot `axe_crit1` for attacks.
+- Attack animation is inserted without changing the existing damage call, timers, or AI state flow.
+- Enemy and Goblin compile/save and Simulate PIE validation passed.
+
+## 2026-07-28 Animation follow-up
+
+- Fixed movement-direction rotation for both Enemy and Goblin.
+- Replaced the ineffective Goblin runtime AnimBP result with explicit looping `ThirdPersonRun`.
+- PIE visually confirmed moving Goblins in animated running poses.

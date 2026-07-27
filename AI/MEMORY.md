@@ -201,3 +201,25 @@ Only mark a gameplay feature complete after its Blueprint compiles, the asset is
 - Enemy/Goblin and weapon/projectile collision settings generate compatible overlaps.
 - `BP_Enemy`, `BP_Goblin`, `BP_Fireball`, and `BP_Sword` compiled with warnings as errors and saved.
 - Temporary PIE test actors were removed and `L_Test` was not saved. No Blueprint Runtime Error or Accessed None was logged.
+
+## 2026-07-28 Enemy and Goblin Animation
+
+- Root cause: both Character meshes used Animation Blueprint mode with `Anim Class=None`, leaving them in reference poses.
+- `BP_Goblin` BeginPlay now assigns the existing compatible `/Game/Swampgoblin/Mesh/ABP_Goblin`.
+- `BP_Enemy` has no Orc Animation Blueprint in the project, so BeginPlay starts `/Game/Orc/Animations/axe_run` looping.
+- `BP_Enemy.BeginAttack` now plays `/Game/Orc/Animations/axe_crit1` once before the existing `ApplyDamage` call.
+- `BP_Enemy.EndRecovery` restores looping `axe_run` before the existing chase-resume logic.
+- Existing sensing, chase movement, attack damage `15`, attack range `150`, recovery timers, health, and HP bar logic were preserved.
+- Both Blueprints compiled with warnings as errors and saved.
+- L_Test Simulate PIE confirmed the Goblin runtime Anim Class is `ABP_Goblin`, actors move from their placed positions, and Enemy state progresses through attack windup back to chase.
+- No Blueprint Runtime Error or Accessed None occurred.
+
+## 2026-07-28 Enemy Rotation and Goblin Animation Follow-up
+
+- Found both Characters had `bUseControllerRotationYaw=true` and `bOrientRotationToMovement=false`, preventing movement-direction turning.
+- Both BeginPlay graphs now set `Use Controller Rotation Yaw=false` and `Orient Rotation to Movement=true`; rotation rate remains yaw `360`.
+- `ABP_Goblin` did not visibly animate in the current enemy setup, so Goblin BeginPlay now explicitly loops the compatible `/Game/Swampgoblin/Demo/ThirdPersonRun` sequence.
+- Orc keeps its existing looping `axe_run` and one-shot `axe_crit1` attack wiring.
+- Both Blueprints compiled and saved.
+- L_Test Simulate PIE confirmed runtime rotation settings on both actors and visually captured Goblins in running poses while moving.
+- No Blueprint Runtime Error or Accessed None occurred.

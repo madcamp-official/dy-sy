@@ -117,3 +117,19 @@ Current status is planning/inspection only. Nothing in this package is marked co
 - [x] Sword overlap and speed-gated BPI damage wiring was re-verified.
 - [x] Enemy, Goblin, Fireball, and Sword compile/save passed.
 - [ ] Final physical VR attack and headset-view confirmation remains required.
+
+## 2026-07-28 Enemy animation
+
+- [x] Goblin uses its existing `ABP_Goblin` at runtime.
+- [x] Orc Enemy loops `axe_run` while moving.
+- [x] Orc Enemy plays `axe_crit1` during its existing attack and restores run after recovery.
+- [x] Existing chase and attack damage behavior is preserved.
+- [x] Compile/save and Simulate PIE passed without Blueprint runtime errors.
+- [ ] Final pacing and visual quality require VR Preview/Quest confirmation.
+
+## 2026-07-28 Animation follow-up
+
+- [x] Enemy and Goblin rotate toward movement (`Controller Yaw=false`, `Orient Rotation to Movement=true`).
+- [x] Goblin explicitly loops `ThirdPersonRun`; PIE visually confirmed a running pose.
+- [x] Orc run and attack sequences remain connected.
+- [x] Compile/save and PIE runtime checks passed without Blueprint errors.
