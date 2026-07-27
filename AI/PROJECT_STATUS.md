@@ -70,3 +70,50 @@ Current status is planning/inspection only. Nothing in this package is marked co
 - [x] Collision radius reduced to 14 cm.
 - [x] BP_XRPawn and BP_Fireball compile/save passed; PIE had no runtime error or Accessed None.
 - [ ] Physical VR firing validation for repeated placement, aim direction, visible size, and travel.
+
+## 2026-07-27 Fireball visual consistency follow-up
+
+- [x] SpawnActor input re-verified as `FireballSpawnPoint.GetWorldTransform`.
+- [x] Spawn point re-verified under `MotionControllerLeftAim` at deterministic relative transform: location `(25,0,0)`, rotation `(0,0,0)`, scale `(1,1,1)`.
+- [x] Removed the `ProjectileFX` local X offset of `-20`; the visible Niagara effect now shares the fireball/collision origin.
+- [x] Niagara component rotation is zero and uniform scale is fixed at `0.5`.
+- [x] Collision sphere remains `14 cm`, matching the reduced visual size.
+- [x] Damage `25`, speed `1500`, lifespan `4`, hit effect, `BPI_Damage2`, and gameplay logic were preserved.
+- [x] `BP_Fireball` and `BP_XRPawn` compile/save passed; L_Test PIE produced no Blueprint Runtime Error, Accessed None, Compile Error, or Broken Reference.
+- [ ] Repeated physical controller firing still requires VR Preview/Quest because MCP cannot inject the OpenXR button input.
+
+## 2026-07-27 Enemy world-space HP bar
+
+- [x] Existing `WBP_EnemyHealthBar` inspected and reused; it displays `CurrentHealth / MaxHealth` through `HealthProgressBar`.
+- [x] `BP_DamageDummy` now owns a Screen-space `HealthBarWidget` at Z `120`.
+- [x] Existing `BP_Enemy.HealthBarWidget` confirmed at Z `220` and configured with the same WBP.
+- [x] Screen widget space guarantees camera-facing presentation without actor Tick rotation.
+- [x] Both damage handlers update the widget immediately after `Set CurrentHealth`; original damage, zero check, and Destroy paths are preserved.
+- [x] Widget, Dummy, and Enemy compile/save passed.
+- [x] PIE confirmed runtime Widget Components and initial full ratios: Dummy `100/100`, Enemy `40/40`.
+- [x] No Blueprint Runtime Error, Accessed None, Compile Error, or Broken Reference.
+- [ ] Fireball hit reduction was not reproduced by the MCP temporary-projectile test.
+- [ ] Sword reduction is blocked by the known incomplete `BP_Sword.TrySwordDamage`.
+- [ ] Runtime zero-before-Destroy and widget disappearance require a successful damage-to-zero test.
+
+## 2026-07-27 Enemy HP bar scope correction
+
+- [x] Final scope restricted to `BP_Enemy` and `BP_Goblin`.
+- [x] `BP_DamageDummy.HealthBarWidget` removed.
+- [x] DamageDummy WBP refresh nodes removed and original health/damage/Destroy execution restored.
+- [x] WBP DamageDummy branch removed; Enemy and Goblin `CurrentHealth / MaxHealth` branches retained.
+- [x] Enemy and Goblin use `WBP_EnemyHealthBar`, Screen space, `150x20`, Z `220`.
+- [x] Enemy and Goblin refresh immediately after `Set CurrentHealth`.
+- [x] All four requested assets compile/save passed.
+- [x] PIE: Enemy `40/40` with widget; three Goblins `40/40` with widgets; DamageDummy `100/100` with no widget.
+- [x] No Blueprint Runtime Error, Accessed None, Compile Error, or Broken Reference.
+- [ ] A physical damage hit and visible bar reduction were not reproduced in this PIE run.
+
+## 2026-07-28 HP bar and attack follow-up
+
+- [x] Enemy/Goblin BeginPlay no longer re-enables Draw at Desired Size.
+- [x] Runtime bars retain fixed `200x24`, Screen space, Z `220`, and visible state.
+- [x] Fireball overlap now enters the existing BPI damage execution chain.
+- [x] Sword overlap and speed-gated BPI damage wiring was re-verified.
+- [x] Enemy, Goblin, Fireball, and Sword compile/save passed.
+- [ ] Final physical VR attack and headset-view confirmation remains required.
