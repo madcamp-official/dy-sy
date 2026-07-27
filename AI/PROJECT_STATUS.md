@@ -1,5 +1,14 @@
 # Project Status
 
+## 2026-07-27 Locomotion / Enemy Visibility Verification
+- [x] Disabled right-thumbstick turning by removing all `IA_Turn` mappings from `IMC_Default`.
+- [x] Preserved normal HMD tracking and existing hand, grab, and sword systems.
+- [x] Repaired the missing execution wire in `BP_XRPawn.ApplySmoothLocomotion`.
+- [x] Verified HMD-yaw-relative forward/backward/strafe calculation, pitch ignored through `Normalize2D`, speed 300 cm/s.
+- [x] Reused and exposed one existing `BP_Enemy` in `L_Test`; no enemy combat logic changed.
+- [x] Compiled, saved, and ran in-process PIE without a new Blueprint runtime error.
+- [ ] Perform final physical Quest controller test for stick direction/deadzone and confirm right stick produces no turn.
+
 ## 현재 단계
 P0 Foundation
 
