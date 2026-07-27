@@ -1,0 +1,11 @@
+# Quest Ready
+- [ ] Android SDK
+- [ ] Quest device detected
+- [ ] OpenXR input
+- [ ] build installs
+- [ ] build launches
+- [ ] controller alignment
+- [ ] stable performance
+- [ ] HUD readable
+- [ ] no severe discomfort
+- [ ] backup APK/build
