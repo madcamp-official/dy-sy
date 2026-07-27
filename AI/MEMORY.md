@@ -1,5 +1,15 @@
 # Project Memory
 
+## 2026-07-27 Locomotion and L_Test Enemy Fix
+- Inspected the live Unreal state before editing.
+- `/Game/XRFramework/Input/IMC_Default`: removed all four `IA_Turn` mappings for Valve Index, Oculus Touch, Vive, and PICO right-stick X axes. Left-stick `IA_Move`, grab, and menu mappings were preserved.
+- `/Game/XRFramework/Blueprints/BP_XRPawn`: `IA_Move.Triggered` and the HMD-yaw-relative direction calculation already existed. Repaired the missing execution connection from `ApplySmoothLocomotion` entry to its swept `AddActorWorldOffset` call. Speed remains 300 cm/s and pitch is ignored through `Normalize2D`.
+- HMD, motion-controller, hand, grabbing, and sword components/logic were not modified.
+- `/Game/Maps/L_Test`: reused existing `BP_Enemy_C_1`, moved it to `(240, 50, 0)` approximately 350 cm in front of PlayerStart, and confirmed it faces the player. Actor hidden=false; Orc mesh visible=true and hidden-in-game=false. Enemy combat logic was not changed.
+- `BP_XRPawn` and `BP_Enemy` compiled with warnings treated as errors. `IMC_Default`, `BP_XRPawn`, and `L_Test` were saved.
+- PIE spawned `BP_XRPawn_C_0`, hand/controller components, equipped `BP_Sword`, and visible `BP_Enemy_C_1`. No current PIE Blueprint Runtime Error or Accessed None was observed.
+- Right-stick turn is structurally disabled because `IA_Turn` has zero active mappings. Physical OpenXR stick injection is unavailable through MCP, so final controller feel requires a device test.
+
 ## 프로젝트
 - Unreal Engine 5.8
 - Meta Quest / OpenXR
