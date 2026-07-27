@@ -51,3 +51,12 @@ P0 Foundation
 
 ## 완료 기준
 각 항목은 Compile, Save, PIE 검증, 회귀 테스트가 끝나야 체크합니다.
+
+## 2026-07-27 Left Joystick Locomotion Side Task
+- [x] 왼쪽 스틱 Axis2D 매핑 및 Dead Zone `0.2`
+- [x] HMD 카메라 Yaw 기준 Smooth Locomotion `300 cm/s`
+- [x] 전진·후진·좌우 스트레이프 그래프 구현
+- [x] 기존 Snap Turn 그래프 유지 및 오른쪽 스틱 X축 재매핑
+- [x] `BP_XRPawn` Compile/Save 및 L_Test 인프로세스 PIE 시작
+- [ ] 물리 OpenXR 컨트롤러와 손 추적 회귀 테스트
+- 이 작업에서 Combat, Sword, Damage, Enemy 에셋은 수정하지 않음

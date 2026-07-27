@@ -213,3 +213,19 @@
   - 이전 충돌 위치 `[-110, 140, 110]` PIE start override에서도 `BP_XRPawn_C_0`와 `EquippedSword_GEN_VARIABLE_BP_Sword_C_CAT_0` 생성 성공
   - 기본 PlayerStart PIE에서도 Pawn과 Sword 생성 성공
   - PIE 종료, L_Test와 BP_XRPawn dirty state 없음
+
+## 2026-07-27 Left Joystick Smooth Locomotion
+- 수정 범위: `/Game/XRFramework/Blueprints/BP_XRPawn`, `/Game/XRFramework/Input/Actions/IA_Move`, `/Game/XRFramework/Input/IMC_Default`
+- `IA_Move`를 Axis2D로 변경하고 Dead Zone 하한을 `0.2`로 설정; 기존 positive-only modifier 제거
+- Valve Index, Oculus Touch, Vive, PICO의 왼쪽 스틱 2D를 `IA_Move`에 매핑
+- 기존 Snap Turn은 유지하면서 `IA_Turn`을 각 기기의 오른쪽 스틱 X축으로 재매핑
+- `BP_XRPawn.ApplySmoothLocomotion(MoveAxis)` 추가:
+  - PlayerCameraManager 카메라 회전 기준
+  - Forward/Right 벡터를 `Normalize2D`하여 카메라 Pitch 무시
+  - 전진·후진·좌우 스트레이프 지원
+  - `300 cm/s * World Delta Seconds` 오프셋 적용
+  - `AddActorWorldOffset` Sweep 사용
+- `IA_Move.Triggered`를 새 이동 함수에 연결하고, 동일 입력의 기존 텔레포트 실행 연결만 분리함. 텔레포트 함수 자체는 삭제하지 않음
+- `BP_XRPawn` warnings-as-errors Compile 성공, 관련 에셋 3개 Save 성공
+- L_Test 인프로세스 PIE 시작 성공, 새 Blueprint Runtime Error/Accessed None 없음
+- MCP는 실제 OpenXR 축 입력을 주입할 수 없고 로그에 `XR_ERROR_INITIALIZATION_FAILED` 기록이 있어, 물리 스틱 방향·Snap Turn·실시간 손 추적 회귀 검증은 실기기에서 추가 확인 필요
