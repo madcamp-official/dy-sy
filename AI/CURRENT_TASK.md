@@ -105,3 +105,43 @@ Run PIE in `/Game/Maps/L_Test` only after all feature assets compile and save su
 - NS_Free_Magic_Attack2 remains at uniform scale 0.5; collision radius is 14 cm.
 - Compile/save and structural PIE validation passed.
 - Physical controller firing validation remains; do not mark the overall VFX package complete.
+
+## Fireball visual consistency follow-up
+
+- The fireball spawn chain is confirmed as `FireballSpawnPoint.GetWorldTransform -> SpawnActor BP_Fireball`.
+- `FireballSpawnPoint` remains exactly 25 cm forward under `MotionControllerLeftAim`, with inherited controller world rotation and deterministic unit scale.
+- Corrected `BP_Fireball.ProjectileFX` relative location from `(-20,0,0)` to `(0,0,0)` so the visible effect is not behind the projectile origin or closer to the hand.
+- Niagara relative rotation remains zero and uniform scale remains `0.5`; no Marketplace Niagara asset was modified.
+- Collision radius remains `14 cm`.
+- Damage, speed, lifetime, hit effect, `BPI_Damage2`, and existing gameplay logic are unchanged.
+- `BP_Fireball` and `BP_XRPawn` compiled with warnings as errors, saved clean, and passed structural L_Test PIE validation without Blueprint Runtime Error or Accessed None.
+- Repeated physical shots remain a VR Preview/Quest validation item; the overall VFX package is still in progress.
+
+## Enemy world-space HP bar result
+
+- `/Game/UI/WBP_EnemyHealthBar` exists and is saved with a `HealthProgressBar`.
+- The widget reads the owning enemy's existing `CurrentHealth` and `MaxHealth` and displays their ratio. Existing Enemy/Goblin support was preserved; DamageDummy support was added.
+- `BP_DamageDummy` now has `HealthBarWidget` at Z `120`.
+- `BP_Enemy` retains its existing `HealthBarWidget` at Z `220`.
+- Both components use Screen widget space so the bars remain camera-facing and are destroyed with their owning actor.
+- Both `HandleDamage` functions call the widget update immediately after setting `CurrentHealth`; their health calculation, zero branch, and Destroy logic were not changed.
+- WBP, Dummy, and Enemy compile/save passed. PIE confirmed both components and 100% initial ratios without runtime errors.
+- Fireball and Sword damage validation did not pass in the automated MCP workflow. Do not mark the combat validation portion complete.
+
+## Enemy HP bar scope correction
+
+- HP bars are now limited to `BP_Enemy` and `BP_Goblin`.
+- `BP_DamageDummy` no longer contains `HealthBarWidget` or HP bar refresh wiring.
+- DamageDummy remains `CurrentHealth=100`, `MaxHealth=100`, and its existing `BPI_Damage2`/Destroy flow is preserved.
+- Enemy and Goblin both use the existing `WBP_EnemyHealthBar`, display `CurrentHealth / MaxHealth`, use Screen widget space, and sit at Z `220`.
+- Both real enemy damage handlers call `SetHealthPercent` immediately after `Set CurrentHealth`, with a safe failure continuation into their original behavior.
+- Requested compile/save and PIE structural validation passed without runtime errors.
+- Runtime damage-driven visual reduction remains unobserved because physical attack input was not injected.
+
+## 2026-07-28 HP bar and attack repair
+
+- Enemy and Goblin BeginPlay now enforce fixed `200x24` HP bars with Draw at Desired Size disabled.
+- Fireball overlap damage now enters its existing interface-check/damage/hit/destroy chain.
+- Sword overlap damage remains connected and uses its existing 100 cm/s minimum swing speed.
+- All four affected Blueprints compile and are saved.
+- Physical Quest/VR Preview confirmation remains pending.

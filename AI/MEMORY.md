@@ -128,3 +128,76 @@ Only mark a gameplay feature complete after its Blueprint compiles, the asset is
 - `BP_XRPawn` and `BP_Fireball` compiled with warnings treated as errors and saved dirty=false.
 - L_Test PIE spawned `BP_XRPawn_C_0`; runtime `FireballSpawnPoint` was confirmed under `MotionControllerLeftAim` with the expected 25 cm offset. No Blueprint Runtime Error or Accessed None occurred.
 - Physical left-controller firing could not be injected through MCP, so repeated visual placement, direction, consistent scale, and travel require VR Preview/device confirmation.
+
+## 2026-07-27 Fireball Visual Consistency Follow-up
+
+- Re-inspected the saved `BP_XRPawn` SpawnActor chain: `FireballSpawnPoint -> GetWorldTransform -> SpawnActor BP_Fireball`.
+- `FireballSpawnPoint` is a child of `MotionControllerLeftAim` at relative location `(25, 0, 0)`, rotation `(0, 0, 0)`, and scale `(1, 1, 1)`. The spawn node uses `AlwaysSpawn`.
+- Found `BP_Fireball.ProjectileFX` offset by `(-20, 0, 0)`, which placed the visible effect behind the projectile/collision origin and closer to the hand.
+- Changed only `ProjectileFX` relative location to `(0, 0, 0)`. Relative rotation remains `(0, 0, 0)` and uniform relative scale remains `(0.5, 0.5, 0.5)`.
+- Preserved the Marketplace Niagara asset without modification. No exposed size override was needed because component scale is configured deterministically.
+- Preserved `CollisionSphere` radius `14`, Damage `25`, Projectile Movement `1500 cm/s`, zero gravity, rotation-follows-velocity, lifespan `4`, hit effect, `BPI_Damage2`, and existing overlap/destruction logic.
+- `BP_Fireball` and `BP_XRPawn` compiled with warnings treated as errors and saved dirty=false.
+- `L_Test` PIE spawned `BP_XRPawn_C_0`; the runtime spawn point remained parented to `MotionControllerLeftAim` at the expected deterministic transform. No Blueprint Runtime Error, Accessed None, Compile Error, or Broken Reference was found.
+- Physical repeated firing cannot be injected through the current MCP workflow, so repeated-shot visual confirmation still requires VR Preview or Quest. `L_Test` remained dirty and was not saved.
+
+## 2026-07-27 Enemy World-Space HP Bars
+
+- Inspected the existing health implementations before editing.
+  - `BP_DamageDummy`: `CurrentHealth=100`, `MaxHealth=100`; `HandleDamage` sets clamped health, tests zero, then destroys.
+  - `BP_Enemy`: `CurrentHealth=40`, `MaxHealth=40`; `HandleDamage` sets health before its zero/death branch.
+- Reused the existing `/Game/UI/WBP_EnemyHealthBar` instead of recreating it. It contains a variable `HealthProgressBar` and calculates `CurrentHealth / MaxHealth`.
+- Preserved the widget's existing `BP_Enemy` and `BP_Goblin` branches and added a `BP_DamageDummy` owner branch using safe division.
+- Added `HealthBarWidget` to `BP_DamageDummy`, using `WBP_EnemyHealthBar`, Screen widget space, draw size `150x20`, no hardware input, and relative location `(0,0,120)`.
+- Re-verified the existing `BP_Enemy.HealthBarWidget`: Screen widget space, `WBP_EnemyHealthBar`, draw size `150x20`, and relative location `(0,0,220)`.
+- Screen widget space keeps both bars camera-facing without enemy Tick rotation logic. Because each widget belongs to the enemy actor, it is removed with the actor on Destroy.
+- Added an immediate `SetHealthPercent` call directly after each existing `Set CurrentHealth`. Cast failure continues to the original damage flow, so health, zero testing, and destruction behavior are unchanged.
+- `WBP_EnemyHealthBar`, `BP_DamageDummy`, and `BP_Enemy` compiled and saved dirty=false.
+- L_Test PIE confirmed both runtime actors own `HealthBarWidget` and start at full ratios (`100/100`, `40/40`). No Blueprint Runtime Error, Accessed None, Compile Error, or Broken Reference occurred.
+- A temporary unsaved Fireball collision attempt did not reduce DamageDummy health, matching the existing projectile PIE limitation. The temporary actor was removed and L_Test was not saved.
+- Fireball-hit, Sword-hit, zero-before-Destroy, and disappearance-after-Destroy remain unverified in automated PIE. Sword validation is additionally blocked by the known incomplete `BP_Sword.TrySwordDamage` path.
+
+## 2026-07-27 Enemy HP Bar Scope Correction
+
+- Final HP bar scope is `/Game/Blueprints/Enemies/BP_Enemy` and `/Game/Blueprints/Enemies/BP_Goblin` only.
+- Removed `HealthBarWidget` from `BP_DamageDummy`.
+- Removed the DamageDummy owner branch from `WBP_EnemyHealthBar` and removed the DamageDummy widget refresh nodes from `HandleDamage`.
+- Restored the original DamageDummy execution path directly from `Set CurrentHealth` to its existing print/zero/Destroy flow.
+- Re-verified `BP_DamageDummy`: `CurrentHealth=100`, `MaxHealth=100`, root plus `DummyMesh` only. Its health calculation, `BPI_Damage2`, zero check, and Destroy logic are unchanged.
+- `BP_Enemy` and `BP_Goblin` both use `WBP_EnemyHealthBar` through a Screen-space `HealthBarWidget`, draw size `150x20`, relative location `(0,0,220)`, and no hardware input.
+- Added an immediate post-`Set CurrentHealth` widget refresh to `BP_Goblin`, matching the existing immediate refresh in `BP_Enemy`. Cast failure continues the original damage/AI flow.
+- WBP retains only the Enemy and Goblin `CurrentHealth / MaxHealth` owner branches.
+- `WBP_EnemyHealthBar`, `BP_Enemy`, `BP_Goblin`, and `BP_DamageDummy` compiled and saved dirty=false.
+- L_Test PIE found one Enemy and three Goblins, all with `HealthBarWidget` and full `40/40` starting health. DamageDummy had no Widget Component and remained `100/100`.
+- No Blueprint Runtime Error, Accessed None, Compile Error, or Broken Reference was found.
+- Physical damage input was not injected; damage-time bar movement is structurally verified from the immediate execution wiring but not visually reproduced in this PIE run.
+
+## 2026-07-28 Enemy Health Defaults
+
+- Updated `/Game/Blueprints/Enemies/BP_Enemy` to `CurrentHealth=60`, `MaxHealth=60`.
+- Preserved `/Game/Blueprints/Enemies/BP_Goblin` at `CurrentHealth=40`, `MaxHealth=40`.
+- No damage, AI, widget, interface, or Destroy logic was changed.
+- Both Blueprints compiled with warnings treated as errors and saved successfully.
+- L_Test PIE verified the runtime Enemy at `60/60` and all three runtime Goblins at `40/40`.
+- No Blueprint Runtime Error, Accessed None, Compile Error, or Broken Reference was found.
+
+## 2026-07-28 Enemy HP Bar Visibility Fix
+
+- Fixed only the `HealthBarWidget` display settings on `/Game/Blueprints/Enemies/BP_Enemy` and `/Game/Blueprints/Enemies/BP_Goblin`.
+- Disabled `Draw at Desired Size`, which could override the configured render size for the single Progress Bar widget.
+- Enabled component auto-activation and set a fixed `200x24` draw size.
+- Preserved Screen widget space, visible/not-hidden-in-game state, and relative location `(0,0,220)` above each actor.
+- Verified `WBP_EnemyHealthBar.HealthProgressBar` is Visible, opacity `1`, initial percent `1`, and uses an opaque green fill.
+- `WBP_EnemyHealthBar`, `BP_Enemy`, and `BP_Goblin` compiled and saved successfully.
+- L_Test PIE created the runtime Enemy and three Goblins, including their `HealthBarWidget` components. No new Blueprint Runtime Error or Accessed None was observed.
+- The local PIE session ended automatically because OpenXR could not create a headset session (`XR_ERROR_INITIALIZATION_FAILED`); final headset-view visual confirmation remains a Quest/VR Preview check.
+
+## 2026-07-28 HP Bar Runtime Override and Fireball Damage Fix
+
+- Fixed `BP_Enemy` and `BP_Goblin` BeginPlay runtime overrides: draw size is now `200x24` and Draw at Desired Size remains disabled.
+- Simulate PIE confirmed both runtime Widget Components use Screen space, Z `220`, fixed `200x24`, visible=true, hidden-in-game=false, and `WBP_EnemyHealthBar`.
+- Fixed the disconnected execution entry in `BP_Fireball.HandleProjectileOverlap`; its existing interface check, Damage `25`, hit effect, and Destroy flow now execute.
+- Re-verified `BP_Sword`: overlap calls `TrySwordDamage`, checks speed >= `100`, and sends `BPI_Damage2.ApplyDamage` with damage `15`.
+- Enemy/Goblin and weapon/projectile collision settings generate compatible overlaps.
+- `BP_Enemy`, `BP_Goblin`, `BP_Fireball`, and `BP_Sword` compiled with warnings as errors and saved.
+- Temporary PIE test actors were removed and `L_Test` was not saved. No Blueprint Runtime Error or Accessed None was logged.
