@@ -1,5 +1,13 @@
 # Project Memory
 
+## 2026-07-29 Sword trail removal
+
+- Removed `SwordTrailFX` from `/Game/Blueprints/Weapons/BP_Sword` and deleted its Activate/Deactivate nodes.
+- Preserved sword speed calculation, collision, and damage behavior.
+- Kept `/Game/VFX/NS_SwordTrail` intact as an unused source asset.
+- `BP_Sword` compiled, saved, and passed `L_Test` PIE with no runtime Blueprint errors or `Accessed None`.
+- `L_Test` was not saved.
+
 ## 2026-07-28 Player HUD view coverage adjustment
 
 - Changed `BP_XRPawn.PlayerHUDWidget` camera distance from 70 cm to 55 cm.
@@ -436,3 +444,11 @@ Only mark a gameplay feature complete after its Blueprint compiles, the asset is
 - The timer is initialized once through a DoOnce path; existing chase and combat behavior is unchanged once a target is acquired.
 - Both Blueprints compiled with warnings as errors, saved successfully, and produced no new Blueprint Runtime Error or Accessed None during L_Test PIE.
 - Quest/VR Preview remains the final check for patrol feel and acquisition distance.
+# 2026-07-29 Right-controller snap turn restoration
+
+- Restored `IA_Turn` X-axis mappings in `/Game/XRFramework/Input/IMC_Default` for Oculus Touch, Valve Index, Vive, and PICO right controllers.
+- Reused the existing `BP_XRPawn` `IA_Turn -> SnapTurn` logic; no direct Camera rotation, HMD tracking override, vignette, or view-blocking overlay was added.
+- This keeps physical head tracking independent while the right stick rotates the player rig.
+- `BP_XRPawn` compiled with warnings treated as errors and the input mapping asset was saved.
+- L_Test PIE started and stopped successfully. No new `Blueprint Runtime Error` or `Accessed None` appeared; the matching log query only contained older session entries.
+- Physical right-stick input and HMD head movement together still require a Quest/VR Preview check.

@@ -1,5 +1,13 @@
 # AI Memory
 
+## 2026-07-29 Sword trail removal
+
+- Removed the `SwordTrailFX` Niagara component from `/Game/Blueprints/Weapons/BP_Sword`.
+- Removed only the trail-specific Activate/Deactivate graph nodes; sword speed calculation, collision, and damage logic were preserved.
+- The source Niagara asset `/Game/VFX/NS_SwordTrail` was not deleted or modified.
+- `BP_Sword` compiled with warnings as errors and was saved.
+- `L_Test` PIE confirmed the runtime sword has no Niagara component and logged no `Blueprint Runtime Error` or `Accessed None`; `L_Test` was not saved.
+
 ## 2026-07-28 Player HUD view coverage adjustment
 
 - Moved `BP_XRPawn.PlayerHUDWidget` from 70 cm to 55 cm in front of the camera.
@@ -318,3 +326,11 @@ prompts/07_WaveSystem.md (BP_WaveManager) 구현 완료: Wave1 = BP_Goblin 3마�
 - 매크로 인스턴스(`CompareInt`) 하나 새로 추가할 때, 기존에 알려진 "매크로 연달아 생성 시 이전 것 소실" 버그를 피하려고 만들자마자 바로 배선 완료 후 compile_blueprint로 고정하고 나서 나머지 노드(SpawnActorFromClass 등)를 이어서 만듦 — 문제 없이 전부 살아있음을 확인.
 - 컴파일 에러 없음, 저장 완료. **L_Test에 단독 배치해뒀던 `BP_Boss_C_0`는 제거함**(이제 웨이브 클리어로만 등장해야 하므로 처음부터 존재하면 안 됨).
 - **미검증**: 사람이 직접 고블린 3→오크 2를 다 죽여서 실제로 보스가 스폰되는지, 그리고 보스까지 죽였을 때 `OnAllWavesCleared`가 정상 발동하는지 최종 확인 필요(MCP로는 PIE 중 데미지 주입이 불가능해 구조적 배선 검증까지만 가능).
+# 2026-07-29 Right-controller snap turn restoration
+
+- Restored `IA_Turn` X-axis mappings in `/Game/XRFramework/Input/IMC_Default` for Oculus Touch, Valve Index, Vive, and PICO right controllers.
+- Reused the existing `BP_XRPawn` `IA_Turn -> SnapTurn` logic; no direct Camera rotation, HMD tracking override, vignette, or view-blocking overlay was added.
+- This keeps physical head tracking independent while the right stick rotates the player rig.
+- `BP_XRPawn` compiled with warnings treated as errors and the input mapping asset was saved.
+- L_Test PIE started and stopped successfully. No new `Blueprint Runtime Error` or `Accessed None` appeared; the matching log query only contained older session entries.
+- Physical right-stick input and HMD head movement together still require a Quest/VR Preview check.
