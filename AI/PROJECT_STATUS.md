@@ -26,19 +26,19 @@ Last live audit: 2026-07-28 (Unreal MCP, editor state read-only)
 | Right-stick turning | Verified Complete | `IA_Turn` mappings were structurally removed; physical controller confirmation remains. |
 | HMD/controller tracking | Not Verified | XR hierarchy exists and prior PIE spawned the pawn; physical OpenXR tracking was not audited on a headset. |
 | Sword attachment | Verified Complete | Prior PIE observed equipped sword on spawned pawn. |
-| Sword collision | In Progress | Saved overlap wiring was re-inspected previously; no current physical-hit PIE proof. |
-| Sword speed | In Progress | Saved threshold is 100 cm/s; no current physical swing proof. |
-| Sword damage | In Progress | Saved `TrySwordDamage` calls `BPI_Damage2.ApplyDamage` for 15 after the speed gate; prior “disconnected” note is obsolete, but successful current damage PIE proof is absent. |
+| Sword collision | Fixed, PIE unverified | Root cause found 2026-07-28: `BP_Enemy`/`BP_Goblin` `CollisionCylinder` used the stock `Pawn` profile, whose WorldDynamic response is Block; `SwordCollision` is object type WorldDynamic, so the pair always resolved to Block and `OnComponentBeginOverlap(SwordCollision)` never fired. Added an explicit `WorldDynamic:Overlap` response override on both capsules (`ObjectTools.set_properties` on `bodyInstance.collisionResponses`), compiled and saved. Needs a real headset swing to confirm. |
+| Sword speed | Verified Complete | `UpdateSwordSpeed` self pin on `GetActorLocation` confirmed still connected; `SwordSpeed = Distance(loc, PreviousLocation)/DeltaSeconds` each Tick, threshold `MinimumDamageSpeed=100`. Logic was never the problem — the collision gate above was. |
+| Sword damage | Fixed, PIE unverified | `TrySwordDamage` branch (`InRange(SwordSpeed, MinimumDamageSpeed, 1000000)`) → `ApplyDamage(OtherActor, SwordDamage=15)` confirmed correctly wired end-to-end; only blocked by the collision-response bug above, now fixed. |
 | Sword Trail | Not Started | No verified Niagara trail component/activation. |
 | Sword Wave | In Progress | `/Game/Blueprints/Weapons/BP_SwordWave` exists, saved and previously compiled; launch integration and damage PIE evidence are absent. |
 | Left-hand magic Aura | Not Started | No verified charge Aura integration. |
 | Fireball input/spawn | In Progress | `BP_XRPawn` has saved `FireballSpawnPoint` and SpawnActor wiring; physical button firing is not verified. |
 | `BP_Fireball` movement | In Progress | Saved ProjectileMovement at 1500 cm/s and lifespan 4; runtime travel/expiry is not conclusively verified. |
-| Fireball collision/damage | In Progress | Previously repaired overlap execution reaches 25-damage BPI chain; no successful enemy damage PIE proof. |
+| Fireball collision/damage | Fixed, PIE unverified | Root cause found 2026-07-28: `HandleProjectileOverlap` never destroyed the projectile or guarded against re-triggering, despite an unused `HitProcessed` bool already existing — one fireball could fly through and damage every enemy in its path (matches "everything disappears" report). Added `NOT(HitProcessed)` guard branch plus `SetHitProcessed(true)` + `DestroyActor(self)` after a successful hit. Compiled/saved. |
 | Fireball hit effect | In Progress | Saved hit-effect wiring exists; runtime visual proof is absent. |
-| Enemy HP bar | In Progress | Enemy/Goblin own saved Screen-space `WBP_EnemyHealthBar` components and PIE showed full initial values; damage-driven visual reduction is unverified. |
-| `BP_Enemy` health/death | In Progress | Saved 60/60 health and damage/death logic; runtime damage-to-zero proof is absent. |
-| `BP_Enemy` AI/animation | In Progress | Prior Simulate PIE showed movement, attack-state recovery, `axe_run`, and `axe_crit1`; navigation is disabled in L_Test and final combat behavior is unverified. |
+| Enemy HP bar | Fixed, PIE unverified | Root cause found 2026-07-28: World-space `HealthBarWidget` inherited the rotating character mesh's orientation, so it never faced the camera and was effectively invisible from most angles. Added `bAbsoluteRotation=true` plus a `FindLookAtRotation`+`SetWorldRotation` billboard update piggybacked on the existing 0.2s `CheckPlayerDistance` timer, in both `BP_Enemy` and `BP_Goblin`. Compiled/saved. |
+| `BP_Enemy` health/death | In Progress | Saved 60/60 health and damage/death logic; runtime damage-to-zero proof is absent. Damage path was blocked upstream by the sword-collision bug above; should now be reachable. |
+| `BP_Enemy` AI/animation | Fixed, PIE unverified | Root cause found 2026-07-28 for the "runs at player then snaps back, repeats forever" report: `ChaseTick`'s NavMesh `SimpleMoveToLocation` goal used the VR pawn's raw Z, which didn't match the NavMesh projection height and caused the goal to oscillate every tick. Goal is now `MakeVector(targetX, targetY, selfZ)` (X/Y follow target, Z stays at the enemy's own height) in both `BP_Enemy` and `BP_Goblin`. Compiled. Navigation being disabled in L_Test (noted below) still needs resolving for this to work in-level. |
 | `BP_Goblin` health/death | In Progress | Saved 40/40 health/death logic; runtime damage-to-zero proof is absent. |
 | `BP_Goblin` AI/animation | Broken | Prior PIE showed movement/run pose, but current log has two `ABP_Goblin` disconnected state-machine compiler warnings. Blueprint currently forces `ThirdPersonRun`, so the asset warning remains unresolved. |
 | Orc assets/animations | In Progress | Mesh, Skeleton, and sequences exist; no Orc AnimBP or Montage was found. Enemy directly plays sequences. |
@@ -73,7 +73,7 @@ Last live audit: 2026-07-28 (Unreal MCP, editor state read-only)
 
 - P0: Combat cannot yet be called playable: successful Sword/Fireball damage, HP-bar reduction, and enemy death have no current end-to-end PIE evidence.
 - P1: No boss or victory/defeat presentation flow.
-- P1: L_Test has navigation disabled (`bEnableNavigationSystem=false`) and no NavMesh asset was found; navigation-dependent AI remains at risk.
+- P1 (partially stale as of 2026-07-28): `L_Test` now contains `NavMeshBoundsVolume_1` and `RecastNavMesh-Default` (added during enemy chase-AI work), so the earlier "no NavMesh asset found" claim is outdated. Whether the mesh actually generates walkable surface under real headset movement is still unverified.
 - P1: `ABP_Goblin` emits two disconnected state-machine compiler warnings.
 - P1: `Content/Maps/L_Test.umap` is modified in Git although the loaded asset reports clean; do not overwrite it without reconciling ownership.
 - P1: Quest/Android packaging and device input/tracking are unverified; OpenXR logs missing controller and eye-gaze extensions in the desktop session.
