@@ -1,57 +1,33 @@
-# Current Task — End-to-End Enemy Damage Validation
+# Current Task — Minimal Player HUD
 
 ## Status
 
-Not started. This is the single recommended next task.
+Not started. Automatic Restart on Player Death is complete and must be preserved.
 
 ## Objective
 
-Prove one existing player attack damages the real Enemy and updates its HP bar in `/Game/Maps/L_Test`; if it fails, repair only the smallest broken execution/collision link.
+Define and implement the smallest player-owned HUD required for the prototype.
 
-## Exact target assets
+## Initial target scope
 
-- `/Game/Blueprints/Weapons/BP_Sword`
-- `/Game/Blueprints/Magic/BP_Fireball`
-- `/Game/Blueprints/Enemies/BP_Enemy`
-- `/Game/UI/WBP_EnemyHealthBar`
-- `/Game/Blueprints/Interfaces/BPI_Damage2` (inspect only)
-- `/Game/Maps/L_Test` (PIE test only; do not save)
+- Inspect existing UI assets before choosing exact widget paths.
+- Reuse `/Game/XRFramework/Blueprints/BP_XRPawn` only where player-owned HUD attachment or data access is required.
+- Test in `/Game/Maps/L_Test` without saving the map.
 
-## Allowed modifications
+## Required preservation
 
-- Only the smallest wiring or collision correction needed in Sword or Fireball to deliver the already configured damage.
-- HP-bar refresh wiring only if health changes but the bar does not.
+- Existing player health and `BPI_Damage2` path
+- `IsDead` one-shot death state
+- `DeathRestartDelay=2.0`
+- Automatic `RestartCurrentLevel`
+- Alive-only locomotion and Fireball gates
+- Death-time Sword collision shutdown
+- XR camera, HMD, controller, and hand tracking
 
-## Restrictions
+## Team ownership restrictions
 
-- Do not change damage values, enemy MaxHealth, AI, animation, locomotion, XR tracking, or Marketplace assets.
-- Do not modify `BPI_Damage2`, Wave Manager, boss work, project settings, or Level Blueprint.
-- Do not save `/Game/Maps/L_Test`; Git already contains an uncommitted map change.
+Do not modify Enemy, Goblin, enemy HP bar, enemy AI/collision/animation, Wave Manager, boss, or other teammate-owned assets without explicit coordination.
 
-## Implementation requirements
+## Gate
 
-1. Inspect the saved attack-to-interface execution chain and compatible overlap settings.
-2. Run one deterministic PIE hit against `/Game/Blueprints/Enemies/BP_Enemy`.
-3. Confirm health changes from 60 to the expected value and the visible bar changes in the same event.
-4. If the test fails, change only the first proven broken link and repeat.
-
-## Compile/save tests
-
-- Compile every modified Blueprint with warnings treated as errors.
-- Save only modified Blueprint assets.
-- Confirm modified Blueprints are `dirty=false`.
-- No Compile Error, Broken Reference, or new warning in the modified assets.
-
-## PIE completion criteria
-
-- One Sword or Fireball hit reaches `BPI_Damage2` exactly once.
-- Enemy health decreases from 60 by the configured attack damage.
-- `WBP_EnemyHealthBar` visibly updates immediately.
-- No Blueprint Runtime Error, Accessed None, or collision spam.
-- PIE stops cleanly and L_Test remains unsaved.
-
-## Current blockers
-
-- Physical OpenXR input cannot be relied upon for automated testing; use a deterministic in-editor trigger.
-- L_Test is modified in Git despite reporting clean in the editor.
-- Fireball and Sword have saved structural wiring but lack current successful end-to-end PIE proof.
+Do not start implementation automatically. Inspect the current UI assets and agree on minimal HUD content and XR placement first.

@@ -20,8 +20,8 @@ Last live audit: 2026-07-28 (Unreal MCP, editor state read-only)
 |---|---|---|
 | Damage System / `BPI_Damage2` | Verified Complete | `/Game/Blueprints/Interfaces/BPI_Damage2` exists and is saved; prior saved compile plus L_Test PIE damage-dummy 100→50→destroy evidence is retained. |
 | Player health | Verified Complete | `BP_XRPawn` saved; prior compile and L_Test PIE evidence records 100→50→0 without pawn destruction. |
-| Player death | Not Started | No verified death flow. |
-| Restart | Not Started | No verified restart flow. |
+| Player death | Verified Complete | Saved `BP_XRPawn` compile and PIE evidence: `CurrentHealth=0` sets `IsDead=true` once and gates player gameplay actions. Physical Quest input confirmation remains. |
+| Restart | Verified Complete | One non-looping 2-second timer calls `RestartCurrentLevel`; PIE logs prove actual L_Test reloads and final PIE starts at health 100 with `IsDead=false`. |
 | Left-stick movement | Verified Complete | Saved graph and prior PIE movement evidence; physical Quest input remains unverified. |
 | Right-stick turning | Verified Complete | `IA_Turn` mappings were structurally removed; physical controller confirmation remains. |
 | HMD/controller tracking | Not Verified | XR hierarchy exists and prior PIE spawned the pawn; physical OpenXR tracking was not audited on a headset. |
@@ -72,7 +72,7 @@ Last live audit: 2026-07-28 (Unreal MCP, editor state read-only)
 ## Blockers
 
 - P0: Combat cannot yet be called playable: successful Sword/Fireball damage, HP-bar reduction, and enemy death have no current end-to-end PIE evidence.
-- P1: No player death/restart; no boss; no HUD or victory/defeat flow.
+- P1: No player HUD, boss, or victory/defeat presentation flow.
 - P1: L_Test has navigation disabled (`bEnableNavigationSystem=false`) and no NavMesh asset was found; navigation-dependent AI remains at risk.
 - P1: `ABP_Goblin` emits two disconnected state-machine compiler warnings.
 - P1: `Content/Maps/L_Test.umap` is modified in Git although the loaded asset reports clean; do not overwrite it without reconciling ownership.
@@ -82,4 +82,8 @@ Last live audit: 2026-07-28 (Unreal MCP, editor state read-only)
 
 ## Recommended next task
 
-Run one deterministic L_Test PIE combat-damage validation and repair only the smallest failing execution link. Target `/Game/Blueprints/Weapons/BP_Sword`, `/Game/Blueprints/Magic/BP_Fireball`, `/Game/Blueprints/Enemies/BP_Enemy`, `/Game/UI/WBP_EnemyHealthBar`, and `/Game/Maps/L_Test` (test only; do not save the map). Completion requires affected Blueprints to compile with warnings treated as errors, remain saved, and PIE to prove one Sword or Fireball hit reduces Enemy health and the visible HP bar immediately with no runtime errors.
+Inspect existing UI assets and define the smallest player-owned HUD. Preserve the completed automatic restart flow and do not modify teammate-owned enemy or boss assets.
+
+## Completed automatic-restart task record
+
+Implement Automatic Restart on Player Death using `/Game/XRFramework/Blueprints/BP_XRPawn`. Reuse the existing player-health path, enter death exactly once at zero health, block movement/combat, start one short timer, and automatically reload the current level so the game returns to its initial state without restart input. Compile/save only player-owned assets and verify death→automatic level restart→full starting health in L_Test PIE without saving the map. Enemy, Goblin, enemy HP-bar, AI, animation, Wave Manager, and boss assets are teammate-owned and must not be modified.
