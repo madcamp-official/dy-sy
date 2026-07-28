@@ -36,6 +36,14 @@
 		{
 			"Name": "AllToolsets",
 			"Enabled": true
+		},
+		{
+			"Name": "CodeEditor",
+			"Enabled": true
+		},
+		{
+			"Name": "Terminal",
+			"Enabled": true
 		}
 	],
 	"TargetPlatforms": [
