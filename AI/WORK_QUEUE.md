@@ -12,10 +12,11 @@ Last synchronized: 2026-07-28 live audit
 - [x] Sword attachment
 - [x] Automatic level restart on player death
 - [x] Minimal player HUD
+- [ ] CURRENT: Compact GUI Parts Player HUD (layout assembled; save and runtime wiring still required)
 
 ## P0 — current gameplay blocker
 
-- [ ] CURRENT: Player Magic and Sword VFX Package
+- [ ] Player Magic and Sword VFX Package (resume after compact HUD is complete)
 
 ## P1 — required prototype work
 

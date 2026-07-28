@@ -91,3 +91,16 @@ Created `/Game/UI/WBP_PlayerHUD` with only a green health bar and `Current / Max
 ## Completed automatic-restart task record
 
 Implement Automatic Restart on Player Death using `/Game/XRFramework/Blueprints/BP_XRPawn`. Reuse the existing player-health path, enter death exactly once at zero health, block movement/combat, start one short timer, and automatically reload the current level so the game returns to its initial state without restart input. Compile/save only player-owned assets and verify death→automatic level restart→full starting health in L_Test PIE without saving the map. Enemy, Goblin, enemy HP-bar, AI, animation, Wave Manager, and boss assets are teammate-owned and must not be modified.
+# Compact Player HUD update — 2026-07-28
+
+Status: In progress, not yet saved or runtime-verified.
+
+- GUI Parts asset inspection: complete.
+- Compact HUD visual layout in connected editor: assembled.
+- Existing health HUD reuse: complete.
+- Three charge variables: added in the editor.
+- Warning proximity/blink wiring: pending.
+- Independent charge bar wiring: pending.
+- Minimap capture and one-press toggle: pending.
+- Asset-scoped save: blocked (`save_assets` returned false).
+- L_Test PIE: not run.

@@ -1,35 +1,32 @@
-# Current Task — Player Magic and Sword VFX Package
+# Current Task — Compact Player HUD
 
 ## Status
 
-Ready to start. Minimal Player HUD and Automatic Restart on Player Death are complete.
+In progress. The compact GUI Parts layout was assembled in the connected editor, but the asset-scoped save API returned false. Do not mark complete until the saved assets and runtime behaviors are verified.
 
-## Objective
+## Target
 
-Complete the remaining player-owned VFX integration:
+- `/Game/UI/WBP_PlayerHUD`
+- `/Game/XRFramework/Blueprints/BP_XRPawn`
+- Test only in `/Game/Maps/L_Test`; do not save the map.
 
-- Left-hand charge Aura
-- Sword Trail
-- Sword Wave launch integration
+## Implemented in the current editor session
 
-Work in one small feature at a time. Inspect existing saved player assets and Niagara systems before changing them.
+- Existing `WBP_PlayerHUD` reused and expanded with a corner-based Canvas layout.
+- GUI Parts reused for HP, three spell slots/icons, and the circular minimap frame.
+- Three float values added: `MagicSlot1Charge`, `MagicSlot2Charge`, `MagicSlot3Charge`.
+- HUD widget component changed to a compact camera-attached curved world-space HUD.
+- Existing health function and player-owned gameplay components were preserved.
 
-## Required preservation
+## Still required
 
-- Existing player health and `BPI_Damage2` path
-- `/Game/UI/WBP_PlayerHUD` and the left-wrist `PlayerHUDWidget`
-- Event-driven `UpdatePlayerHUD`; do not add Tick-based HUD polling
-- `IsDead` one-shot death state
-- `DeathRestartDelay=2.0`
-- Automatic `RestartCurrentLevel`
-- Alive-only locomotion and Fireball gates
-- Death-time Sword collision shutdown
-- XR camera, HMD, controller, and hand tracking
+- Save only `WBP_PlayerHUD` and `BP_XRPawn`.
+- Connect three magic values to their independent progress bars.
+- Connect the nearby-enemy warning and event-driven blink without modifying enemy assets.
+- Connect `IA_Menu_Toggle_Right` Started to minimap visibility with one toggle per press.
+- Create and connect SceneCapture2D/RenderTarget if supported.
+- Compile, run L_Test PIE, check runtime errors, and capture a screenshot.
 
-## Team ownership restrictions
+## Restrictions
 
-Do not modify Enemy, Goblin, enemy HP bar, enemy AI/collision/animation, Wave Manager, boss, or other teammate-owned assets without explicit coordination.
-
-## Gate
-
-Start with the left-hand charge Aura only. Compile, save, and validate that small feature before beginning Sword Trail or Sword Wave launch.
+Do not modify enemy, goblin, boss, wave manager, enemy health widget, damage interface, Marketplace source assets, or `L_Test`.
