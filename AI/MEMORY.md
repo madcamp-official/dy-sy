@@ -1,5 +1,34 @@
 # Project Memory
 
+## 2026-07-28 Fireball input repeat fix and player HUD visibility disable
+
+- Modified and saved only `/Game/XRFramework/Blueprints/BP_XRPawn`.
+- Fireball spawning remains connected to `IA_Grab_Left_Pressed`, but execution now starts from the action's one-shot `Started` output instead of the continuously evaluated `Triggered` output.
+- Existing `IsDead` gate, `FireballSpawnPoint`, SpawnActor transform, Fireball class, and player death/restart flow were preserved.
+- `PlayerHUDWidget` still uses `/Game/UI/WBP_PlayerHUD` and its BeginPlay/post-damage update logic remains active.
+- Set only `PlayerHUDWidget.bHiddenInGame=true`, so the HUD is invisible during play without deleting its component, widget class, health values, or update functions.
+- `BP_XRPawn` compiled with warnings treated as errors and saved successfully.
+- A five-second L_Test PIE run with no input found zero `BP_Fireball` actors.
+- Runtime `PlayerHUDWidget` reported `bHiddenInGame=true` while retaining `WBP_PlayerHUD` as its widget class.
+- No Blueprint Runtime Error, Accessed None, Compile Error, or Broken Reference was logged.
+- `/Game/Maps/L_Test` and all teammate-owned enemy/boss assets were not modified or saved.
+
+## 2026-07-28 Minimal Player HUD — verified complete
+
+- Created and saved `/Game/UI/WBP_PlayerHUD`; the existing enemy-owned `WBP_EnemyHealthBar` was not reused or modified.
+- The HUD contains only a green `HealthProgressBar` and centered `HealthText` in `Current / Max` form.
+- Added `SetPlayerHealth(CurrentHealth, MaxHealth)` to the widget. It branches before division when `MaxHealth <= 0`, then updates the bar and rounded whole-number text.
+- Added one world-space `PlayerHUDWidget` component to `/Game/XRFramework/Blueprints/BP_XRPawn`.
+- The component is attached to `MotionControllerLeftGrip` at relative location `(0,0,10)`, rotation `(0,90,90)`, scale `(0.08,0.08,0.08)`, draw size `240x80`, transparent/two-sided, and receives no hardware input.
+- Added event-driven `UpdatePlayerHUD` in `BP_XRPawn`. It safely casts the Widget Component user widget to `WBP_PlayerHUD`; cast failure has no side effects.
+- `UpdatePlayerHUD` runs once from BeginPlay and immediately after the existing `CurrentHealth` setter in `BPI_Damage2.ApplyDamage`. No player or widget Tick polling was added.
+- `WBP_PlayerHUD` and `BP_XRPawn` compiled with warnings treated as errors and were saved successfully.
+- L_Test PIE spawned exactly one `BP_XRPawn` with one `PlayerHUDWidget`. Runtime damage changed player health from `100` to `55`, exercising the existing post-damage HUD refresh path.
+- No Blueprint Runtime Error, Accessed None, Compile Error, or Broken Reference was logged.
+- Existing `IsDead`, two-second automatic current-level restart, alive-only movement/Fireball gates, death Sword shutdown, and XR hierarchy were preserved.
+- `/Game/Maps/L_Test`, Enemy, Goblin, enemy HP bar, AI, animation, Wave Manager, boss, and damage interface assets were not modified or saved.
+- Physical Quest/HMD confirmation of wrist orientation, size, and readability remains required.
+
 ## 2026-07-28 Automatic Restart on Player Death — verified complete
 
 - Modified and saved only `/Game/XRFramework/Blueprints/BP_XRPawn`.

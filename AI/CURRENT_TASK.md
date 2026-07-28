@@ -1,22 +1,24 @@
-# Current Task — Minimal Player HUD
+# Current Task — Player Magic and Sword VFX Package
 
 ## Status
 
-Not started. Automatic Restart on Player Death is complete and must be preserved.
+Ready to start. Minimal Player HUD and Automatic Restart on Player Death are complete.
 
 ## Objective
 
-Define and implement the smallest player-owned HUD required for the prototype.
+Complete the remaining player-owned VFX integration:
 
-## Initial target scope
+- Left-hand charge Aura
+- Sword Trail
+- Sword Wave launch integration
 
-- Inspect existing UI assets before choosing exact widget paths.
-- Reuse `/Game/XRFramework/Blueprints/BP_XRPawn` only where player-owned HUD attachment or data access is required.
-- Test in `/Game/Maps/L_Test` without saving the map.
+Work in one small feature at a time. Inspect existing saved player assets and Niagara systems before changing them.
 
 ## Required preservation
 
 - Existing player health and `BPI_Damage2` path
+- `/Game/UI/WBP_PlayerHUD` and the left-wrist `PlayerHUDWidget`
+- Event-driven `UpdatePlayerHUD`; do not add Tick-based HUD polling
 - `IsDead` one-shot death state
 - `DeathRestartDelay=2.0`
 - Automatic `RestartCurrentLevel`
@@ -30,4 +32,4 @@ Do not modify Enemy, Goblin, enemy HP bar, enemy AI/collision/animation, Wave Ma
 
 ## Gate
 
-Do not start implementation automatically. Inspect the current UI assets and agree on minimal HUD content and XR placement first.
+Start with the left-hand charge Aura only. Compile, save, and validate that small feature before beginning Sword Trail or Sword Wave launch.
