@@ -10,23 +10,25 @@ Last synchronized: 2026-07-28 live audit
 - [x] Left-stick locomotion
 - [x] Right-stick turning disabled
 - [x] Sword attachment
+- [x] Automatic level restart on player death
 
 ## P0 — current gameplay blocker
 
-- [ ] CURRENT: End-to-end Sword or Fireball → Enemy damage → HP-bar PIE validation
-- [ ] Enemy damage-to-zero, death, and widget-removal validation
+- [ ] CURRENT: Minimal player HUD
 
 ## P1 — required prototype work
 
-- [ ] Player death and restart
-- [ ] Goblin AnimBP warning cleanup
 - [ ] Finish magic Aura, Sword Trail, and Sword Wave launch integration
-- [ ] Verify Goblin combat/death
-- [ ] Verify Wave Manager behavior
+- [ ] Victory and defeat flow
+
+## P1 — teammate-owned / coordination required
+
+- [ ] Enemy damage, death, HP-bar, collision, AI, and animation validation
+- [ ] Goblin AnimBP warning cleanup
+- [ ] Wave Manager behavior
 - [ ] Boss actor and pattern 1
 - [ ] Boss pattern 2
-- [ ] Boss health UI / HUD
-- [ ] Victory and defeat flow
+- [ ] Boss health UI
 - [ ] L_Test navigation decision and NavMesh validation if required
 
 ## P1 — external/device dependent

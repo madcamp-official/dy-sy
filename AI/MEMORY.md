@@ -1,5 +1,32 @@
 # Project Memory
 
+## 2026-07-28 Automatic Restart on Player Death — verified complete
+
+- Modified and saved only `/Game/XRFramework/Blueprints/BP_XRPawn`.
+- Added `IsDead` (`bool`, default `false`) and `DeathRestartDelay` (`float`, default `2.0`).
+- Existing `BPI_Damage2.ApplyDamage` flow subtracts Damage, clamps and sets `CurrentHealth`, then checks `CurrentHealth <= 0`.
+- Zero health checks `IsDead`; only the false branch sets `IsDead=true`, so death and restart are requested once.
+- Death disables Sword damage through `EquippedSword -> GetChildActor -> SetActorEnableCollision(false)` without modifying `BP_Sword`.
+- `IA_Move.Triggered` and the Fireball input `IA_Grab_Left_Pressed.Triggered` use `IsDead` branches; only the false/alive branch reaches locomotion or Fireball SpawnActor.
+- HMD, Camera, MotionController, hand hierarchy, and tracking components were not disabled or rewired.
+- One non-looping `SetTimerByFunctionName` calls `RestartCurrentLevel` after `DeathRestartDelay`.
+- `RestartCurrentLevel` uses `GetCurrentLevelName -> OpenLevel(by Name)` with no restart input.
+- `BP_XRPawn` compiled with warnings treated as errors, saved successfully, and reports `dirty=false`.
+- PIE used a temporary unsaved BeginPlay path calling the existing `ApplyDamage(100)` after 5 seconds. Runtime reached `CurrentHealth=0`, `IsDead=true`; L_Test actually reloaded every 7 seconds (5-second test trigger plus the real 2-second death timer).
+- The temporary nodes were removed. Final PIE starts at `CurrentHealth=100`, `MaxHealth=100`, `IsDead=false`, `DeathRestartDelay=2`.
+- Final PIE pawn transform exactly matched L_Test `PlayerStart`: location `(240,400,130)`, rotation `(0,-90,0)`, scale `(1,1,1)`.
+- No Blueprint Runtime Error, Accessed None, Compile Error, or Broken Reference was logged. L_Test was not saved.
+- Physical movement/Sword/Fireball input gating and packaged Quest reload remain manual device checks.
+
+## 2026-07-28 Team ownership and current task
+
+- Automatic Restart on Player Death is complete in editor validation.
+- Primary target is `/Game/XRFramework/Blueprints/BP_XRPawn`.
+- When player health reaches zero, the intended flow is: enter death once, block player control, wait for one short non-looping timer, then automatically reload the current level. No restart input or defeat widget is required by this task.
+- Successful restart must return the player to the initial PlayerStart with full starting health and reset level state.
+- Enemy and boss work is now teammate-owned. Do not modify or save `BP_Enemy`, `BP_Goblin`, `WBP_EnemyHealthBar`, enemy health/death/collision/AI/animation assets, `BP_WaveManager`, or teammate-owned boss assets without explicit coordination.
+- `/Game/Maps/L_Test` remains test-only and must not be saved because it contains an existing uncommitted change.
+
 ## 2026-07-28 Fireball hit-VFX removal
 
 - Modified only `/Game/Blueprints/Magic/BP_Fireball`; no Enemy, Goblin, HP-bar, AI, animation, or map asset was changed or saved.
