@@ -1,5 +1,30 @@
 # Project Memory
 
+## 2026-07-28 Fireball hit-VFX removal
+
+- Modified only `/Game/Blueprints/Magic/BP_Fireball`; no Enemy, Goblin, HP-bar, AI, animation, or map asset was changed or saved.
+- Removed the red hit-effect spawn using `/Game/Free_Magic/VFX_Niagara/NS_Free_Magic_Hit1`.
+- Successful valid-target flow now applies `BPI_Damage2.ApplyDamage` without destroying the Fireball; Damage remains `25`.
+- The traveling effect remains `/Game/Free_Magic/VFX_Niagara/NS_Free_Magic_Attack2` on `ProjectileFX` at uniform scale `0.2`.
+- Enemy overlap does not end or replace the traveling effect. The Fireball continues moving with the same green effect until its unchanged `InitialLifeSpan=4.0` expires.
+- `BP_Fireball` compiled with warnings treated as errors, saved successfully, and reports `dirty=false`.
+- L_Test PIE started successfully with no Blueprint Runtime Error, Accessed None, Compile Error, or Broken Reference. Physical controller firing and the exact visual result still require VR Preview/Quest confirmation.
+- After PIE, `/Game/Maps/L_Test` reported dirty. It was not saved; preserve the existing teammate/uncommitted map state.
+
+## 2026-07-28 Read-only live audit
+
+- Connected Unreal MCP is responsive. Current map is `/Game/Maps/L_Test`; PIE is stopped.
+- L_Test World Settings uses `/Game/XRFramework/Blueprints/BP_XRGameMode`, whose default pawn is `/Game/XRFramework/Blueprints/BP_XRPawn`.
+- L_Test has `bEnableNavigationSystem=false`; no asset matching `NavMesh` was found.
+- The following audited assets exist and report `dirty=false`: `BP_XRPawn`, `BP_Sword`, `BP_Fireball`, `BP_SwordWave`, `BP_Enemy`, `BP_Goblin`, `BP_DamageDummy`, `BPI_Damage2`, `WBP_EnemyHealthBar`, `BP_WaveManager`, and `L_Test`.
+- Git independently reports `Content/Maps/L_Test.umap` modified. Preserve it and do not save over it until ownership is reconciled.
+- Current logs contain no Blueprint Runtime Error, Accessed None, Compile Error, or Broken Reference match. They do contain two compiler warnings in `/Game/Swampgoblin/Mesh/ABP_Goblin`: its state-machine entry is not connected.
+- Fireball and Sword saved damage paths exist; the earlier statements that Fireball/SwordWave were missing and that Sword damage had no effective interface call are obsolete.
+- End-to-end Sword/Fireball damage against a real Enemy, visible HP-bar reduction, and enemy death remain unverified.
+- `/Game/Blueprints/Systems/BP_WaveManager` exists but behavior is not verified. No `BP_Boss` asset was found.
+- Orc exact assets: mesh `/Game/Orc/Mesh/SK_Orc_brown`, Skeleton `/Game/Orc/Mesh/SK_Orc_all_Skeleton`, sequences `/Game/Orc/Animations/axe_run` and `/Game/Orc/Animations/axe_crit1`. No Orc Animation Blueprint or Montage was found.
+- Git is on `main` at `91e2e3138ba17d274c5eda601f578f7381a40c18`. `dy-sy/` is an untracked nested repository; no `.gitmodules` is present. This replaces the stale claim that it is a tracked mode-160000 gitlink.
+
 ## Project
 
 - Unreal Engine 5.8
