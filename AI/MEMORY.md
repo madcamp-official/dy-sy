@@ -452,3 +452,11 @@ Only mark a gameplay feature complete after its Blueprint compiles, the asset is
 - `BP_XRPawn` compiled with warnings treated as errors and the input mapping asset was saved.
 - L_Test PIE started and stopped successfully. No new `Blueprint Runtime Error` or `Accessed None` appeared; the matching log query only contained older session entries.
 - Physical right-stick input and HMD head movement together still require a Quest/VR Preview check.
+# 2026-07-29 Ground contact stabilization
+
+- Updated `BP_Goblin`, `BP_Enemy` (Orc), and `BP_Boss` Character Movement settings to keep continuous walkable-floor contact: gravity scale 1, Walking as the land mode, always-check-floor enabled, flat-base floor checks enabled, perch extra height 0, walking off ledges disabled, and physics allowed without a controller.
+- Corrected the Goblin and Orc skeletal mesh offsets from capsule center `Z=0` to `Z=-88`, matching their capsule half-height so their visible feet align with the collision base. Boss already had a correct ground-relative mesh offset (`Z=-97`) and was preserved.
+- `BP_XRPawn` is a VR Pawn rather than a Character. Its HMD camera remains `bLockToHmd=true`; camera height was not forced or clamped. The existing floor-relative VR origin and body collision were preserved so physical crouching/head movement are not broken.
+- All three modified enemy Blueprints compiled with warnings treated as errors and saved successfully.
+- L_Test PIE confirmed Goblins use `MOVE_Walking`, report a blocking walkable floor, and retain the new floor-check settings at runtime. No Blueprint Runtime Error or Accessed None occurred. L_Test was not saved.
+- Boss/Orc runtime ground contact still needs observation when their waves spawn, and player physical floor alignment needs a Quest/VR Preview check.
