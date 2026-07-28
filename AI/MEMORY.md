@@ -411,3 +411,10 @@ Only mark a gameplay feature complete after its Blueprint compiles, the asset is
 - Asset-scoped `save_assets` returned false for both HUD assets. The changes must not be considered durable until saved and verified.
 - Blueprint node-type search timed out, so magic-bar wiring, enemy-warning blink, minimap input toggle, SceneCapture2D/RenderTarget, and PIE verification remain incomplete.
 - Do not use Save All because it may persist unrelated assets or a test map.
+## 2026-07-28 Enemy awareness and idle patrol
+
+- `BP_Enemy` and `BP_Goblin` now use a 1500 cm sensing value and a 1500 cm overlap sphere (previously 800 cm).
+- Both normal enemies have a timer-driven `IdlePatrolStep`: while no `TargetActor` is valid, they move slowly with swept collision and make small random yaw adjustments.
+- The timer is initialized once through a DoOnce path; existing chase and combat behavior is unchanged once a target is acquired.
+- Both Blueprints compiled with warnings as errors, saved successfully, and produced no new Blueprint Runtime Error or Accessed None during L_Test PIE.
+- Quest/VR Preview remains the final check for patrol feel and acquisition distance.
