@@ -304,3 +304,14 @@ Only mark a gameplay feature complete after its Blueprint compiles, the asset is
 - Both Blueprints compiled and saved.
 - L_Test Simulate PIE confirmed runtime rotation settings on both actors and visually captured Goblins in running poses while moving.
 - No Blueprint Runtime Error or Accessed None occurred.
+# 2026-07-28 Compact Player HUD session
+
+- Inspected the imported `/Game/GuiParts` pack before editing UI.
+- Reused `Hp_frame`, `lil_roundframe_ready2`, `skill_icon_01_nobg` through `skill_icon_03_nobg`, `Mini_background`, and `Mini_frame2`.
+- Reused `/Game/UI/WBP_PlayerHUD`; no replacement HUD asset was created.
+- In the connected editor, expanded the HUD to a transparent Canvas layout with compact corner elements and added three float charge values.
+- In the connected editor, attached `PlayerHUDWidget` to the camera and configured a 1280x720 curved, transparent world-space HUD.
+- `WBP_PlayerHUD` compiled successfully. `BP_XRPawn` compile returned without an error.
+- Asset-scoped `save_assets` returned false for both HUD assets. The changes must not be considered durable until saved and verified.
+- Blueprint node-type search timed out, so magic-bar wiring, enemy-warning blink, minimap input toggle, SceneCapture2D/RenderTarget, and PIE verification remain incomplete.
+- Do not use Save All because it may persist unrelated assets or a test map.

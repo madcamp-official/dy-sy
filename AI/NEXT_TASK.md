@@ -1,6 +1,6 @@
 # Next Tasks
 
-Start only after `CURRENT_TASK` passes compile/save and L_Test PIE.
+Start only after the compact Player HUD in `CURRENT_TASK` passes asset-scoped save, compile, and L_Test PIE.
 
 ## Teammate-independent follow-up
 
