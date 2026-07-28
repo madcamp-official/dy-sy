@@ -342,3 +342,39 @@ prompts/07_WaveSystem.md (BP_WaveManager) 구현 완료: Wave1 = BP_Goblin 3마�
 - All three modified enemy Blueprints compiled with warnings treated as errors and saved successfully.
 - L_Test PIE confirmed Goblins use `MOVE_Walking`, report a blocking walkable floor, and retain the new floor-check settings at runtime. No Blueprint Runtime Error or Accessed None occurred. L_Test was not saved.
 - Boss/Orc runtime ground contact still needs observation when their waves spawn, and player physical floor alignment needs a Quest/VR Preview check.
+# 2026-07-29 Player magic visual size reduction
+
+- Reduced the player `BP_Fireball` `ProjectileFX` Niagara component scale from `0.2` to `0.133333`, exactly two-thirds of its previous visible size.
+- Preserved the collision sphere, projectile movement, damage behavior, and full effect lifetime.
+- `BP_Fireball` compiled with warnings treated as errors and saved successfully.
+- L_Test PIE produced no Blueprint Runtime Error or Accessed None. L_Test was not saved.
+# 2026-07-29 Passive defense magic
+
+- Implemented a passive defense magic effect on `BP_XRPawn` using the visual content from `/Game/FXVarietyPack/Blueprints/BP_ky_healAura`.
+- The Blueprint can be placed normally but did not create its internal actor when used as a runtime Child Actor Component. Replaced that unreliable wrapper with its exact source particle `/Game/FXVarietyPack/Particles/P_ky_healAura` attached to `VROrigin` as `DefenseAura`.
+- `DefenseAura` uses scale `0.65`, is visible, and auto-activates with the player.
+- Implemented the passive defense effect as 50% incoming enemy-damage reduction: Goblin/Orc attack `15 -> 7.5`; Boss attack `25 -> 12.5`, slam `40 -> 20`, fireball `15 -> 7.5`.
+- Existing left/right controller inputs, Sword, Fireball, HMD tracking, health, and restart logic were preserved.
+- `BP_XRPawn`, `BP_Goblin`, `BP_Enemy`, and `BP_Boss` compiled with warnings treated as errors and saved.
+- L_Test PIE confirmed the runtime particle component references `P_ky_healAura`, is visible and auto-active. No Blueprint Runtime Error or Accessed None occurred. L_Test was not saved.
+- A button-held/cooldown-based defense mode is not part of this passive version and can be added separately if desired.
+# 2026-07-29 Button-held defense magic
+
+- Converted the passive defense Aura into a held-button defense using the existing left-hand `IA_Menu_Toggle_Left` input (`Oculus Left Y`, with the matching platform mappings already present).
+- `Started` shows the `DefenseAura`; `Completed` hides it. The left-hand menu binding was replaced by defense, while the right-hand menu input remains available.
+- `BP_XRPawn.ApplyDamage` now checks `DefenseAura.IsVisible`: visible means the incoming hit is fully blocked; hidden follows the original health, HUD, death, and restart path.
+- Restored all enemy damage values from the temporary passive-defense reduction: Goblin/Orc `15`, Boss attack `25`, slam `40`, fireball `15`.
+- Defense Aura defaults hidden, uses the `P_ky_healAura` particle from `BP_ky_healAura`, and retains scale `0.65`.
+- `BP_XRPawn`, `BP_Goblin`, `BP_Enemy`, and `BP_Boss` compiled with warnings treated as errors and saved successfully.
+- L_Test PIE confirmed the Aura starts hidden and the input/damage graph wiring is intact. No Blueprint Runtime Error or Accessed None occurred. L_Test was not saved.
+- Physical left-Y press/release and combat blocking require a final Quest/VR Preview check.
+# 2026-07-29 Defense knockback
+
+- Extended the held defense magic so melee attackers are repelled when they attempt to hit while `DefenseAura` is visible.
+- `BP_Goblin`, `BP_Enemy` (Orc), and `BP_Boss` melee damage functions now inspect the target player's `ParticleSystemComponent` visibility before applying damage.
+- If the Aura is visible, the damage message is skipped and the attacking Character is launched backward along the opposite of its forward vector at `600 cm/s`; it then enters its normal recovery path.
+- If the Aura is hidden, the original full damage path runs unchanged. Boss fireballs remain HP-blocked by the player shield but do not launch the distant Boss.
+- Multiple enemies attacking the active shield during the same period are each repelled independently.
+- All four affected Blueprints compiled with warnings treated as errors and saved.
+- L_Test PIE with the runtime Aura forced visible kept player health at `100/100`; no Blueprint Runtime Error or Accessed None occurred. L_Test was not saved.
+- Physical button activation and knockback feel still require Quest/VR Preview validation.
