@@ -1,5 +1,77 @@
 # Project Memory
 
+## 2026-07-28 Player/enemy overlap prevention
+
+- Modified and saved only `/Game/XRFramework/Blueprints/BP_XRPawn`.
+- Added `PlayerBodyCollision`, a camera-attached Capsule Component that follows physical HMD movement in XY.
+- Capsule size is radius `40` cm and half-height `90` cm, positioned `90` cm below the camera with absolute rotation so head pitch/roll does not tilt the body collision.
+- Collision uses the `Pawn` profile with `QueryAndPhysics`; Pawn-to-Pawn contact blocks approaching enemy character capsules.
+- Disabled overlap events and navigation influence on the player body capsule to avoid adding gameplay overlap callbacks or navmesh cost.
+- Preserved `VROrigin`, camera/HMD tracking, controller tracking, locomotion, Sword, Fireball, health, and restart logic.
+- `BP_XRPawn` compiled with warnings treated as errors and saved successfully.
+- L_Test PIE spawned one runtime `PlayerBodyCollision` with the expected dimensions and collision mode. No Blueprint Runtime Error, Accessed None, Compile Error, or Broken Reference was logged.
+- Physical room-scale collision feel and the final personal-space radius still require Quest/VR confirmation.
+
+## 2026-07-28 Sword blade-tip hit detection repair
+
+- Modified and saved only `/Game/Blueprints/Weapons/BP_Sword`.
+- `UpdateSwordSpeed` now measures the world-space movement of the blade tip, calculated from `SwordCollision` local Z `60`, instead of measuring the sword actor/handle origin.
+- Enabled CCD on `SwordCollision` to reduce missed overlap events during fast VR swings.
+- Adjusted `MinimumDamageSpeed` from `100` to `60` cm/s so normal physical swings can pass the damage gate while stationary contact still causes no damage.
+- Preserved the existing `SwordCollision BeginOverlap -> TrySwordDamage -> BPI_Damage2.ApplyDamage` path and `SwordDamage=15`.
+- `BP_Sword` compiled with warnings treated as errors and saved successfully.
+- L_Test PIE logged no Blueprint Runtime Error, Accessed None, Compile Error, or Broken Reference.
+- Physical Quest/VR confirmation of sword-to-enemy damage remains required because tracked-controller motion cannot be injected by the current MCP workflow.
+
+## 2026-07-28 Enemy HP bar display disabled
+
+- Preserved `/Game/UI/WBP_EnemyHealthBar`, its GUI Parts artwork, and health update function.
+- Set only the root `Overlay_0` visibility to `Collapsed`, disabling all enemy HP bar rendering without removing the widget or changing enemy gameplay.
+- `WBP_EnemyHealthBar` compiled and saved successfully.
+- L_Test PIE logged no Blueprint Runtime Error or Accessed None.
+- Enemy, Goblin, AI, attack, health calculation, and map assets were not modified or saved.
+
+## 2026-07-28 Enemy overhead HP bar GUI restoration
+
+- Updated and saved `/Game/UI/WBP_EnemyHealthBar`, `/Game/Blueprints/Enemies/BP_Enemy`, and `/Game/Blueprints/Enemies/BP_Goblin`.
+- Reused `/Game/GuiParts/UiElements/Hp_frame` as the foreground frame and `/Game/GuiParts/UiElements/Hp_line` as the masked left-to-right health fill.
+- Added an overlay layout so the fill sits inside the frame, with transparent widget background and hit testing disabled.
+- Restored `SetHealthPercent(Percent)` so incoming enemy health ratios are applied to `HealthProgressBar.SetPercent`.
+- Enemy health widget components remain visible, transparent, two-sided, and positioned above the enemy head.
+- All three Blueprints compiled with warnings treated as errors and were saved successfully.
+- L_Test PIE spawned three goblins with their `WBP_EnemyHealthBar` widget components visible; no Blueprint Runtime Error or Accessed None was logged.
+- `/Game/Maps/L_Test` was not modified or saved. Physical VR readability and exact apparent size remain a headset check.
+
+## 2026-07-28 L_Test placed SwordWave cleanup
+
+- Removed the three test-only placed actors `BP_SwordWave_C_0`, `BP_SwordWave_C_1`, and `BP_SwordWave_C_2` from `/Game/Maps/L_Test`.
+- Preserved the source asset `/Game/Blueprints/Weapons/BP_SwordWave`.
+- PIE confirmed zero `BP_SwordWave` runtime actors without player input and no Blueprint Runtime Error or Accessed None.
+- Saved `/Game/Maps/L_Test` after explicit user approval; the map reports `dirty=false`.
+- Enemy and boss assets were not modified or saved.
+
+## 2026-07-28 Player HUD health update repair
+
+- Modified and saved only `/Game/UI/WBP_PlayerHUD`; enemy, boss, player, and map assets were not saved.
+- Repaired the disconnected execution path in `SetPlayerHealth`.
+- For `MaxHealth > 0`, `HealthProgressBar.Percent` is now set to `CurrentHealth / MaxHealth`.
+- For invalid or zero `MaxHealth`, the bar safely falls back to `0`.
+- Both paths update `HealthText` as rounded `CurrentHealth / MaxHealth`.
+- `WBP_PlayerHUD` and the existing caller `BP_XRPawn` compiled with warnings treated as errors.
+- L_Test PIE started without a new Blueprint Runtime Error or Accessed None. The automated run kept health at 100, so physical damage/bar reduction remains a VR Preview or Quest confirmation.
+- `/Game/Maps/L_Test` was not saved.
+
+## 2026-07-28 Fireball full-duration green effect restoration
+
+- Modified and saved only `/Game/Blueprints/Magic/BP_Fireball`; enemy, boss, and map assets were not edited or saved.
+- Removed the `DestroyActor(self)` call from the successful damage path in `HandleProjectileOverlap`.
+- Preserved `HitProcessed`: a projectile can apply `BPI_Damage2.ApplyDamage` only once, even if it overlaps again.
+- Preserved the green traveling Niagara system `/Game/Free_Magic/VFX_Niagara/NS_Free_Magic_Attack2`.
+- The projectile and green effect now remain active after a hit until the unchanged `InitialLifeSpan=4.0` expires.
+- `BP_Fireball` compiled with warnings treated as errors and saved successfully.
+- L_Test PIE started successfully. No `Blueprint Runtime Error` or `Accessed None` was logged during the validation run.
+- Physical hit-visual timing still requires VR Preview or Quest confirmation because controller input cannot be injected through the current MCP workflow.
+
 ## 2026-07-28 HUD distance and HP GUI correction
 
 - Moved `BP_XRPawn.PlayerHUDWidget` from 110 cm to 70 cm in front of the camera.
