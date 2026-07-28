@@ -1,5 +1,14 @@
 # Project Memory
 
+## 2026-07-28 Enemy scale, LOS, idle variety, and damage feedback
+
+- `BP_Enemy` and `BP_Goblin` now use actor scale `0.6667`, `MaxWalkSpeed=400`, rotation yaw rate `240`, and a `3.33` cm idle-patrol step.
+- Initial sensing and ongoing chase both require controller `LineOfSightTo`; losing sight behind an obstacle clears the target and returns the enemy to Idle.
+- Idle animation refresh is randomized and desynchronized per instance. Orc rotates among three idle sequences and a slow walk; Goblin rotates among two idle/breathing sequences and a slow walk.
+- Added `/Game/UI/BP_DamageNumber`; both enemy damage handlers spawn upward-floating red signed damage text using the actual applied amount.
+- All three modified/created Blueprints compiled with warnings as errors and were saved. `L_Test` PIE logged no Blueprint Runtime Error or Accessed None, and the map was not saved.
+- VR Preview/Quest should still confirm animation feel, obstacle LOS behavior, and floating-number facing/readability.
+
 ## 2026-07-28 Player/enemy overlap prevention
 
 - Modified and saved only `/Game/XRFramework/Blueprints/BP_XRPawn`.

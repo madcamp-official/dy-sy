@@ -1,5 +1,14 @@
 # AI Memory
 
+## 2026-07-28 Enemy scale, LOS, idle variety, and damage feedback
+
+- Reduced `/Game/Blueprints/Enemies/BP_Enemy` and `/Game/Blueprints/Enemies/BP_Goblin` actor scale to `0.6667` and Character Movement `MaxWalkSpeed` from `600` to `400`; idle patrol step was reduced from `5.0` cm to `3.33` cm per 0.25-second timer interval.
+- Added controller `LineOfSightTo` checks both when the sensing overlap begins and during `ChaseTick`. Enemies do not acquire a player through an obstacle and clear the target/return to Idle if line of sight is lost.
+- Added randomized, desynchronized idle animation refresh timers. Orc uses `axe_IDLE1_1`, `axe_IDLE2_1`, `axe_IDLE3_1`, or `axe_walk1`; Goblin uses `ThirdPersonIdle`, `MM_Idle`, or `ThirdPersonWalk` while it has no target.
+- Created `/Game/UI/BP_DamageNumber`. Enemy and Goblin `HandleDamage` now spawn it after health changes and initialize the floating red text from the actual damage amount, producing values such as `-15` and `-30`. The actor floats upward and expires after 1.2 seconds.
+- `BP_Enemy`, `BP_Goblin`, and `BP_DamageNumber` compiled with warnings treated as errors and were saved.
+- `L_Test` PIE ran without Blueprint Runtime Error or Accessed None. `L_Test` was not saved. Final animation feel, LOS around all map obstacles, and damage-number readability still require VR Preview/Quest visual verification.
+
 ## 2026-07-28 Boss attack VFX/movement + pure-UMG game-flow banners
 
 - Boss (`BP_Boss`): added `SpawnEmitterAtLocation` VFX (ParagonRampage Cascade particles) to `BeginAttack`/`DealAttackDamage`/`DealSlamDamage`; fixed initial movement/rotation snap by setting `bUseControllerRotationYaw=false`, `CharMoveComp.bOrientRotationToMovement=true`, `RotationRate.Yaw=200`, and calling `ChaseTick` immediately from `OnSenseBeginOverlap` instead of waiting for the first timer tick.
