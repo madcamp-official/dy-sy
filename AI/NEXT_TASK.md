@@ -1,14 +1,13 @@
 # Next Tasks
 
-Start only after the compact Player HUD in `CURRENT_TASK` passes asset-scoped save, compile, and L_Test PIE.
+The compact Player HUD has passed asset-scoped save, compile, and L_Test PIE.
 
 ## Teammate-independent follow-up
 
-1. Implement and validate the left-hand charge Aura as one small feature.
-2. Add and validate Sword Trail.
-3. Add and validate Sword Wave launch integration.
-4. Integrate player-side victory/defeat presentation with the final game-state owner.
-5. Quest build preflight, Android packaging, and physical device validation.
+1. After the current left-hand charge Aura task, add and validate Sword Trail.
+2. Add and validate Sword Wave launch integration.
+3. Integrate player-side victory/defeat presentation with the final game-state owner.
+4. Quest build preflight, Android packaging, and physical device validation.
 
 ## Teammate-owned or coordination-required work
 
