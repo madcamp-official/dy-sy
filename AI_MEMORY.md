@@ -1,5 +1,13 @@
 # AI Memory
 
+## 2026-07-28 Player HUD view coverage adjustment
+
+- Moved `BP_XRPawn.PlayerHUDWidget` from 70 cm to 55 cm in front of the camera.
+- Increased its uniform scale from `0.05` to `0.06` and widened the cylindrical arc from `55` to `75` degrees.
+- Preserved the centered pivot, 1280x720 draw size, camera attachment, and all internal HUD anchors.
+- `BP_XRPawn` compiled with warnings as errors and was saved.
+- `L_Test` PIE confirmed the runtime values and logged no `Blueprint Runtime Error` or `Accessed None`; `L_Test` was not saved.
+
 ## 2026-07-28 Enemy behavior restoration on latest main
 
 - Restored the enemy-behavior work without replacing the teammate's current `BP_Enemy` or `BP_Goblin`.

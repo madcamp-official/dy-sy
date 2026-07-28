@@ -1,5 +1,13 @@
 # Project Memory
 
+## 2026-07-28 Player HUD view coverage adjustment
+
+- Changed `BP_XRPawn.PlayerHUDWidget` camera distance from 70 cm to 55 cm.
+- Increased uniform scale from `0.05` to `0.06` and cylindrical coverage from `55` to `75` degrees.
+- Kept the centered pivot, camera attachment, 1280x720 draw size, and existing corner anchors.
+- `BP_XRPawn` compiled, saved, and passed `L_Test` PIE without Blueprint runtime errors or `Accessed None`.
+- `L_Test` was not saved.
+
 ## 2026-07-28 Enemy behavior restoration on latest main
 
 - Reapplied the normal-enemy behavior work on top of the teammate's current assets.
