@@ -1,5 +1,16 @@
 # AI Memory
 
+## 2026-07-28 Enemy behavior restoration on latest main
+
+- Restored the enemy-behavior work without replacing the teammate's current `BP_Enemy` or `BP_Goblin`.
+- Both enemies now use actor scale `0.6667`, chase speed `400`, slower turning, and approximately two-thirds idle-patrol movement.
+- Initial sensing and active chase require controller `LineOfSightTo`; an obstacle clears the target and returns the enemy to Idle.
+- Randomized idle/walk animation refreshes prevent groups from moving in sync.
+- Added `/Game/UI/BP_DamageNumber`; `HandleDamage` spawns rising red text using the actual received damage.
+- `BP_Enemy`, `BP_Goblin`, and `BP_DamageNumber` compiled with warnings as errors and were saved.
+- `L_Test` PIE logged no `Blueprint Runtime Error` or `Accessed None`; the level was not saved.
+- VR/Quest visual verification remains for animation feel and damage-number readability.
+
 ## 2026-07-28 Boss attack VFX/movement + pure-UMG game-flow banners
 
 - Boss (`BP_Boss`): added `SpawnEmitterAtLocation` VFX (ParagonRampage Cascade particles) to `BeginAttack`/`DealAttackDamage`/`DealSlamDamage`; fixed initial movement/rotation snap by setting `bUseControllerRotationYaw=false`, `CharMoveComp.bOrientRotationToMovement=true`, `RotationRate.Yaw=200`, and calling `ChaseTick` immediately from `OnSenseBeginOverlap` instead of waiting for the first timer tick.

@@ -1,5 +1,15 @@
 # Project Memory
 
+## 2026-07-28 Enemy behavior restoration on latest main
+
+- Reapplied the normal-enemy behavior work on top of the teammate's current assets.
+- Orc and Goblin use scale `0.6667`, chase speed `400`, slower turning, and approximately two-thirds idle-patrol movement.
+- Detection and chase continuation require `LineOfSightTo`; obstacles cause target loss and an Idle return.
+- Randomized compatible idle/walk animations keep enemy instances from moving in sync.
+- Added `/Game/UI/BP_DamageNumber` and connected actual damage to rising red `-15`/`-30`-style text.
+- All three modified Blueprints compiled with warnings as errors and were saved.
+- `L_Test` PIE produced no `Blueprint Runtime Error` or `Accessed None`; `L_Test` was not saved.
+
 ## 2026-07-28 Player/enemy overlap prevention
 
 - Modified and saved only `/Game/XRFramework/Blueprints/BP_XRPawn`.
