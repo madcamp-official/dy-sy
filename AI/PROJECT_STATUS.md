@@ -44,7 +44,7 @@ Last live audit: 2026-07-28 (Unreal MCP, editor state read-only)
 | Orc assets/animations | In Progress | Mesh, Skeleton, and sequences exist; no Orc AnimBP or Montage was found. Enemy directly plays sequences. |
 | Wave Manager | Not Verified | `/Game/Blueprints/Systems/BP_WaveManager` exists and is saved, but no compile/PIE behavior evidence was established in this audit. |
 | Boss | Not Started | No `/Game/**/BP_Boss` asset found; no two-pattern boss evidence. |
-| HUD | Not Started | GameMode uses base `/Script/Engine.HUD`; no verified gameplay HUD. |
+| HUD | Verified Complete | Saved `/Game/UI/WBP_PlayerHUD` is attached once to `BP_XRPawn.MotionControllerLeftGrip`; BeginPlay and post-damage event paths update the green bar and `Current / Max` text. PIE exercised health `100→55`. Physical Quest readability remains. |
 | Victory/defeat | Not Started | No verified flow. |
 | Quest build | Not Verified | Android packaging/toolchain not tested. |
 | Quest device test | Not Started | No physical-device evidence. |
@@ -72,7 +72,7 @@ Last live audit: 2026-07-28 (Unreal MCP, editor state read-only)
 ## Blockers
 
 - P0: Combat cannot yet be called playable: successful Sword/Fireball damage, HP-bar reduction, and enemy death have no current end-to-end PIE evidence.
-- P1: No player HUD, boss, or victory/defeat presentation flow.
+- P1: No boss or victory/defeat presentation flow.
 - P1: L_Test has navigation disabled (`bEnableNavigationSystem=false`) and no NavMesh asset was found; navigation-dependent AI remains at risk.
 - P1: `ABP_Goblin` emits two disconnected state-machine compiler warnings.
 - P1: `Content/Maps/L_Test.umap` is modified in Git although the loaded asset reports clean; do not overwrite it without reconciling ownership.
@@ -82,7 +82,11 @@ Last live audit: 2026-07-28 (Unreal MCP, editor state read-only)
 
 ## Recommended next task
 
-Inspect existing UI assets and define the smallest player-owned HUD. Preserve the completed automatic restart flow and do not modify teammate-owned enemy or boss assets.
+Implement only the player-owned left-hand charge Aura first. Preserve the completed HUD and automatic restart flow, and do not modify teammate-owned enemy or boss assets.
+
+## Completed minimal-player-HUD task record
+
+Created `/Game/UI/WBP_PlayerHUD` with only a green health bar and `Current / Max` text. Added one world-space `PlayerHUDWidget` under `BP_XRPawn.MotionControllerLeftGrip` and an event-driven `UpdatePlayerHUD` call at BeginPlay and directly after player health changes. Both assets compile with warnings as errors and are saved. L_Test PIE exercised the damage path from health `100` to `55` without Blueprint runtime errors. L_Test and teammate-owned assets were not saved. Wrist readability/orientation still requires Quest verification.
 
 ## Completed automatic-restart task record
 

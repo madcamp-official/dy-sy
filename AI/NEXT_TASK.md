@@ -4,9 +4,11 @@ Start only after `CURRENT_TASK` passes compile/save and L_Test PIE.
 
 ## Teammate-independent follow-up
 
-1. Complete left-hand charge Aura, Sword Trail, and Sword Wave launch integration.
-2. Integrate player-side victory/defeat presentation with the final game-state owner.
-3. Quest build preflight, Android packaging, and physical device validation.
+1. Implement and validate the left-hand charge Aura as one small feature.
+2. Add and validate Sword Trail.
+3. Add and validate Sword Wave launch integration.
+4. Integrate player-side victory/defeat presentation with the final game-state owner.
+5. Quest build preflight, Android packaging, and physical device validation.
 
 ## Teammate-owned or coordination-required work
 

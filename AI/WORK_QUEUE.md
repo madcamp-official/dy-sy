@@ -11,10 +11,11 @@ Last synchronized: 2026-07-28 live audit
 - [x] Right-stick turning disabled
 - [x] Sword attachment
 - [x] Automatic level restart on player death
+- [x] Minimal player HUD
 
 ## P0 — current gameplay blocker
 
-- [ ] CURRENT: Minimal player HUD
+- [ ] CURRENT: Player Magic and Sword VFX Package
 
 ## P1 — required prototype work
 
