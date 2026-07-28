@@ -162,6 +162,8 @@ prompts/07_WaveSystem.md (BP_WaveManager) 구현 완료: Wave1 = BP_Goblin 3마�
 - 사람이 실제 플레이로 BP_WaveManager의 Wave1→Wave2→OnAllWavesCleared 전환을 확인 (필수 — 위 "검증 미완료 부분" 참고)
 
 ## 다음 작업
+- **(2026-07-28 세션 추가 #14, 필수) 보스 불 마법 공격 실측 확인**: 위 "세션 추가 #14" 참고 — 등장 시 첫 발사, 피격마다 반격 발사, 실제 명중 데미지, 머티리얼 비주얼을 사람이 직접 확인해야 함.
+- **(2026-07-28 세션 추가 #13, 필수) 보스 공격 VFX/회전 실측 확인**: 위 "세션 추가 #13" 참고 — 사람이 직접 웨이브 클리어까지 진행해서 보스를 스폰시켜 VFX 위치/타이밍과 회전 부드러움을 확인해야 함.
 - **(2026-07-28 세션 추가 #6, 권장) 고블린 공격 애니메이션 육안 확인**: 지금은 `ThirdPersonJump_Start`를 임시로 재생 중(진짜 타격 모션 아님). 사람이 PIE로 보고 어색하면 다른 임시 애니메이션으로 교체하거나 아래 리타겟 작업으로 진짜 타격 모션을 만들 것.
 - **(2026-07-28 세션 추가 #5, 선택) 고블린 무기/공격 애니메이션 마무리**: `SK_swampgoblin`에 `WeaponSocket`(hand_r 본)을 이미 만들어뒀음. 사람이 에디터에서 `SM_swampgoblin_spear`를 그 소켓에 부착하는 StaticMeshComponent를 BP_Goblin에 추가하고(간단, MCP로는 소켓 지정 부착이 안 됨), 원하면 `/Game/SpearsAnimationPack`을 IK Retargeter로 `SK_swampgoblin_Skeleton`에 리타겟해서 공격 애니메이션도 추가 가능(본 이름이 표준 UE 매니킨과 동일해서 리타겟 자체는 수월할 것으로 예상).
 - **(2026-07-28 세션 추가 #5, 선택) L_Test의 leftover BP_Fireball 액터 제거 고려**: PIE 시작 시마다 자동 발사되어 웨이브 스폰 고블린 하나를 매번 죽임(재현 확인됨). 웨이브 카운트 테스트를 깨끗하게 하려면 사람이 그 액터를 찾아 지우는 게 좋음.
@@ -228,6 +230,39 @@ prompts/07_WaveSystem.md (BP_WaveManager) 구현 완료: Wave1 = BP_Goblin 3마�
 - **L_Test 배치**: `SceneTools.add_to_scene_from_asset`(asset_path/name/xform/snap_to_ground 파라미터, 기존에 쓰던 "asset"/"transform" 이름이 아님 — 스키마 이름이 다름) 로 `(2500,0,200)`에서 `snap_to_ground=true`로 배치, 지면에 정확히 스냅됨. 일반 웨이브(고블린/오크)와 겹치지 않게 별도 위치. **웨이브 매니저와의 연동(예: Wave2 클리어 후 보스 등장)은 이번 스코프에 포함 안 함** — 지금은 항상 존재하는 단독 배치 상태, 필요하면 다음 작업으로 WaveManager에 Wave3/보스 트리거를 추가해야 함.
 - 컴파일 에러 없음(로그에 실제 컴파일 에러 0건, `get_connected_subgraph` 호출로 인한 "no execute/then pin found" 안내성 경고만 있음 — 기존에 알려진 무해한 잡음), 저장 완료, L_Test 저장 완료.
 - **PIE 검증 안 된 항목(사람 확인 필요)**: 실제 VR에서 Slash/Slam 애니메이션이 어색하지 않은지, 그라운드 스매시가 실제로 범위 공격처럼 보이는지(현재는 단일 대상 데미지만 적용, AOE 로직은 없음 — "Slam"이라는 이름과 달리 실제로는 단일 타겟 근접 공격이라 스펙 문구와 완전히 일치하진 않음, 필요시 다음 세션에서 SphereOverlap 기반 범위 데미지로 업그레이드 고려), 광폭화 전환이 자연스러운지, 보스 체력바가 제대로 보이는지.
+
+## 세션 추가 #13 (2026-07-28, 보스 공격 이펙트 추가 + 초기 이동 자연스럽게)
+
+사용자 요청: "보스 공격 이펙트 추가 + 초기 이동 자연스럽게 만들기". `BP_Boss`(`/Game/Blueprints/Enemies/BP_Boss`)를 대상으로 두 가지를 수정.
+
+- **공격 VFX 추가**: 새 에셋을 만들지 않고, 프로젝트에 이미 임포트되어 있던 Paragon Rampage 전용 Cascade 파티클(`/Game/ParagonRampage/FX/Particles/Abilities/...`)을 그대로 재사용함(캐릭터 자체 전용 이펙트라 위화감 없음). 스폰 노드는 `이펙트|SpawnEmitterAtLocation`(Cascade `ParticleSystem`용, Niagara `SpawnSystemAtLocation`이 아님 — `find_node_types`로 "Emitter" 검색해서 확인).
+  - `BeginAttack`: Slash 분기(`PlayAnimation(Attack_Melee_A)` 직후)에 `P_MeleeTrails_Regular`를, Slam 분기(`PlayAnimation(Ability_GroundSmash_Start)` 직후)에 `P_Rampage_SmashArc`를 SelfPawn의 `GetActorLocation`(퓨어 함수라 두 분기에 팬아웃해서 재사용) 위치에 스폰 — 공격 예고/스윙 단계의 시각 효과.
+  - `DealAttackDamage`: `ApplyDamage` 메시지 호출 직전에 `P_Rampage_Melee_Impact`를 TargetActor의 `GetActorLocation` 위치에 스폰 — 실제 타격 순간의 임팩트.
+  - `DealSlamDamage`: 동일한 위치에 `ApplyDamage` 직전 `P_Rampage_Lunge_Impact`(그라운드 스매시 계열 임팩트) 스폰.
+  - 기존 실행 체인 중간에 노드를 끼워넣는 방식이라 `break_pins`로 기존 exec 연결을 끊고 새 순서로 `connect_pins`함(예: `FunctionEntry.then→Message_0.execute`를 끊고 `FunctionEntry.then→SpawnEmitter.execute→Message_0.execute`로 재배선).
+- **초기 이동(추격 시작) 자연스럽게**:
+  1. **회전 스냅 버그 수정(근본 원인)**: `BP_Boss`(그리고 아마 `BP_Enemy`/`BP_Goblin`도 동일 — 이번엔 보스만 수정)의 `bUseControllerRotationYaw=true`이면서 `CharacterMovement.bOrientRotationToMovement=false`였음 — 즉 폰 회전이 `RotationRate`(360deg/s로 설정돼 있었지만 이 모드에서는 무시됨)를 통한 보간 없이 AIController의 ControlRotation을 매 틱 그대로 스냅 적용받는 구조라, 추격 시작(및 매 방향 전환) 때마다 순간적으로 홱 돌아가는 것처럼 보였음. **`bUseControllerRotationYaw=false` + `CharacterMovement.bOrientRotationToMovement=true`(RotationRate Yaw=200deg/s로 하향, 기존 360은 유지된 값이라 위 모드에선 미사용이었음)로 전환** — 이제 이동 방향에 맞춰 초당 200도로 부드럽게 회전함. `ObjectTools.get_properties`로 `Default__BP_Boss_C`의 컴포넌트 변수명이 `CharMoveComp`(다른 적처럼 `CharacterMovement0`가 아님)임을 먼저 확인해야 했음.
+  2. **추격 시작 시 첫 이동 명령 지연 제거**: `OnSenseBeginOverlap`이 `SetTimerByFunctionName(ChaseTick, Time=ChaseTickInterval(0.15s), Looping=true)`로 반복 타이머만 걸어서, 실제 첫 `ChaseTick`(및 그 안의 `SimpleMoveToLocation`) 실행이 0.15초 뒤로 밀려 그 사이엔 Run 애니메이션만 재생되고 제자리에 서 있는 것처럼 보였음. **타이머 설정 직후 `ChaseTick`을 직접 한 번 더 호출**(로컬 함수 호출 노드 `함수호출|ChaseTick` 추가, `Variables|셀프-레퍼런스` 노드로 self 핀 연결 — 로컬 함수 호출 노드도 self 핀이 자동 연결 안 되는 기존 패턴과 동일)해서 Chase 진입 즉시 이동이 시작되도록 함.
+- 컴파일 에러 없음(`GetLogEntries` category=LogBlueprint pattern=Error 결과 0건), 저장 완료. PIE로 L_Test를 짧게 실행해 로드/BeginPlay 단계에서 새 에러가 없는 것만 확인(현재 L_Test엔 보스가 상시 배치돼 있지 않고 Wave3 클리어 시에만 스폰되므로, 이 PIE로는 보스 자체의 동작을 실측하지 못함 — MCP로는 PIE 중 데미지 주입/웨이브 강제 진행이 불가능한 기존 한계와 동일).
+- **사람 확인 필요(필수)**: 고블린 3→오크 2를 마저 죽여 보스를 실제로 스폰시킨 뒤, (1) Slash/Slam 시 VFX가 자연스러운 위치·타이밍에 보이는지, (2) 추격 시작 시 더 이상 순간적으로 홱 도는 느낌 없이 부드럽게 도는지, (3) RotationRate=200이 보스 덩치에 비해 너무 느리거나 빠르지 않은지 — 필요하면 이 값만 미세조정하면 됨.
+- **다음 후보(미수행)**: `BP_Enemy`/`BP_Goblin`도 동일한 `bUseControllerRotationYaw=true`/`bOrientRotationToMovement=false` 조합일 가능성이 높음(둘 다 이 보스처럼 AI 캐릭터 기본값을 바꾼 적이 없음) — 회전 스냅이 눈에 띄면 동일한 방식으로 고칠 것.
+
+## 세션 추가 #14 (2026-07-28, 보스 불 마법 공격 추가)
+
+사용자 요청: "보스가 불 마법도 쓸 수 있게 추가하자. FX 폴더의 `M_FA_Bubble_Inst`(머티리얼)를 보스가 처음 등장하면 한 번 쏘고, 그 다음부터는 플레이어의 검을 맞을 때마다(=`HandleDamage` 호출 시) 화난 것처럼 플레이어 쪽으로 쏘도록" 구현.
+
+- **새 액터 `/Game/Blueprints/Magic/BP_BossFireball` 생성**: `M_FA_Bubble_Inst`(`/Game/ParagonRampage/FX/Materials/Fire/M_FA_Bubble_Inst`, Rampage 세트에 포함된 파이어볼류 머티리얼)는 머티리얼 하나뿐이라 붙일 지오메트리가 필요함 — `PrimitiveTools.add_sphere`로 스피어 스태틱메시(`FireballMesh`, radius 18, scale 0.5)를 만들고 `ProjectileMovementComponent`를 추가한 뒤, **BeginPlay에서 명시적으로** `SetMaterial(FireballMesh, 0, M_FA_Bubble_Inst)` + `Velocity = ClampVectorSize(GetActorForwardVector, 1400, 1400)`(전방 방향으로 1400cm/s 고정)를 설정하는 방식으로 구현. FireballMesh의 `bodyInstance.collisionEnabled=NoCollision`으로 설정(순수 비주얼용, 레벨 지형에 충돌해 멈추지 않도록). `InitialLifeSpan=3.0`.
+  - **새로 확인한 툴링 사실(중요)**: 블루프린트에 `ActorTools.add_component`/`PrimitiveTools.add_sphere` 등으로 새로 추가한 컴포넌트(SCS 컴포넌트)는 `ObjectTools.get_properties(Default__BP_X_C, ["컴포넌트프로퍼티명"])`로 조회하면 문자열 `"None"`이 반환됨(에러도 아니고 값도 아님) — 이는 SCS 컴포넌트 인스턴스가 CDO(Default 오브젝트)에는 존재하지 않고 실제 스폰 시점에만 만들어지는 UE 자체의 정상 동작이라, MCP 툴링 결함이 아니라 CDO 자체의 한계로 재확인됨. 반면 `add_component`/`add_sphere`가 반환하는 정확한 refPath(`BP_X_C:컴포넌트이름_GEN_VARIABLE` 형식, `Default__` 프리픽스 없음)로는 `set_properties`/`get_properties`가 정상 동작함(SCS 템플릿 기본값 자체는 읽고 쓸 수 있음). 다만 이 값이 실제 스폰 인스턴스에 그대로 적용되는지는 신뢰할 수 없어(기존 "툴링 한계 A"와 동일 계열) 이번에도 BeginPlay에서 명시적으로 재설정하는 방식을 택함.
+  - **PromotableOperator(와일드카드 곱하기) 함정 재확인**: `유틸리티|연산자|곱하기`(와일드카드 곱하기) 노드의 A핀에 Vector를 연결하고 B핀에 `set_pin_value`로 리터럴 float("1400.0")을 넣었더니, 컴파일 후 노드 타입이 `vector*float`가 아니라 `vector*vector`로 잘못 굳어지고 B핀 값이 (0,0,0)으로 리셋되는 문제 발생(리터럴이 B핀의 최종 타입을 결정하지 못함). **해결책**: 이 케이스는 애초에 곱하기 대신 `수학|벡터|ClampVectorSize(A=단위벡터, Min=Max=원하는크기)`를 쓰면 타입 모호성이 아예 없음(기존 ChaseTick에서도 같은 이유로 이미 쓰던 패턴) — 벡터*스칼라가 필요할 때는 곱하기보다 이 방법을 우선할 것.
+  - Cascade 파티클 스폰과 달리 이번엔 `머티리얼 인터페이스` 타입 파라미터라 `이펙트|SpawnEmitterAtLocation`이 아니라 `렌더링|머티리얼|SetMaterial`(PrimitiveComponent 공용 함수) 사용.
+- **`BP_Boss`에 발사 로직 추가**: 신규 변수 `FireballDamage`(15.0)/`FireballTravelDelay`(0.6s), 신규 함수 2개.
+  - `CastFireball`(파라미터 없음): `GetPlayerPawn(0)` → `IsValid` → SelfPawn·PlayerPawn 각각 `GetActorLocation` → `FindLookAtRotation`으로 보스→플레이어 방향 회전 계산 → `MakeTransform`으로 스폰 트랜스폼 구성 → `SpawnActorFromClass(BP_BossFireball)` → `SetTimerByFunctionName(DealFireballDamage, FireballTravelDelay, Looping=false)`(발사체가 "날아가는" 시간만큼 지연 후 데미지 적용).
+  - `DealFireballDamage`(파라미터 없음): `GetPlayerPawn(0)` → `IsValid` → `BPIDamage2.ApplyDamage(Damage=FireballDamage)` 메시지를 플레이어에게 직접 호출. **의도적으로 발사체의 물리 충돌(오버랩)에 의존하지 않음** — 플레이어 폰(`BP_XRPawn`)이 VR 템플릿 기반이라 캡슐 콜리전이 원래 없다는 사실이 이미 기존 세션에서 확인돼 있어서, 만약 이 발사체가 물리 오버랩으로 데미지를 판정하려 했다면 절대 맞지 않았을 것. 대신 보스의 근접 공격(`DealAttackDamage`/`DealSlamDamage`)과 동일하게 "타이머로 지연된 인터페이스 메시지 직접 호출" 패턴을 그대로 재사용해 안전하게 우회함 — `BP_BossFireball` 자체는 순수 비주얼(충돌 없음)이고 실제 대미지는 항상 보스 쪽에서 계산.
+  - **트리거 1(첫 등장 시 1회)**: `EventGraph`의 `BeginPlay` 체인 맨 끝(`CheckPlayerDistance` 반복 타이머 설정 직후)에 `SetTimerByFunctionName(CastFireball, Time=1.0, Looping=false)` 추가 — 보스가 스폰되고 1초 뒤 플레이어를 향해 첫 파이어볼 발사.
+  - **트리거 2(피격마다)**: `HandleDamage`에서 생존(비사망) 분기의 마지막 노드인 `SetTimerByFunctionName(EndHit)`(광폭화 여부와 무관하게 두 하위 분기가 합류하는 지점) 바로 뒤에 로컬 함수 호출 노드 `함수호출|CastFireball`을 추가 — 보스가 대미지를 받아 살아남을 때마다(주로 플레이어 검에 맞을 때) 자동으로 파이어볼 반격.
+- 컴파일 에러 없음(`BP_Boss`, `BP_BossFireball` 둘 다 `GetLogEntries` pattern=Error 결과 0건), 저장 완료.
+- **PIE 검증**: L_Test에 보스를 임시 배치(`BP_Boss_C_0`)해서 PIE로 BeginPlay~1초 후 CastFireball 발동까지 실행해봤으나, **발사체 수명이 3초뿐이고 MCP 툴 왕복 지연(각 호출마다 최소 5~10초 이상)이 이보다 커서 `find_actors`로 살아있는 `BP_BossFireball` 인스턴스를 직접 포착하지 못함**(기존에 문서화된 "MCP로는 짧게 존재하는 상태를 실측하기 어렵다"는 한계와 동일 계열, 새로운 문제 아님). 대신 PIE 동안 `BP_Boss` 라이브 인스턴스의 `CurrentHealth=350`/`State=Idle`이 정상이고 `LogScript`/`LogBlueprint`에 새로운 에러나 "Accessed None"이 전혀 없음을 확인해 **BeginPlay 및 CastFireball 실행 경로 자체가 크래시 없이 정상 동작함은 확인**했지만, 파이어볼이 실제로 화면에 보이는지/플레이어에게 명중해 체력이 깎이는지는 이 MCP로 확증 불가. 테스트용으로 배치했던 `BP_Boss_C_0`는 제거하고 L_Test 저장함(원래대로 웨이브 클리어시에만 보스 등장).
+- **사람 확인 필요(필수)**: 실제 플레이로 (1) 보스 등장 1초 후 파이어볼이 실제로 날아오는지, (2) 검으로 보스를 때릴 때마다 반격 파이어볼이 발사되는지, (3) 파이어볼에 맞으면 플레이어 체력이 실제로 줄어드는지(`FireballDamage=15`), (4) `M_FA_Bubble_Inst` 머티리얼이 구체 메시 위에서 시각적으로 자연스러운지(필요시 스케일/이미시브 강도 등 조정) 확인.
 
 ## 세션 추가 #12 (2026-07-28, BP_WaveManager에 보스 웨이브 연동)
 
