@@ -42,8 +42,8 @@ Last live audit: 2026-07-28 (Unreal MCP, editor state read-only)
 | `BP_Goblin` health/death | Fixed, PIE unverified | Saved 40/40 health/death logic; same upstream fixes as `BP_Enemy` apply. Death no longer calls `DestroyActor` immediately: stops movement, disables capsule collision, then ragdolls via the existing `PHYS_swampgoblin_PhysicsAsset` (`SetCollisionProfileName(Ragdoll)` + `SetSimulatePhysics(true)` on the mesh — no dedicated death animation exists for this skeleton, so physics fall is used instead), then `SetLifeSpan(4.0)`. |
 | `BP_Goblin` AI/animation | Broken | Prior PIE showed movement/run pose, but current log has two `ABP_Goblin` disconnected state-machine compiler warnings. Blueprint currently forces `ThirdPersonRun`, so the asset warning remains unresolved. |
 | Orc assets/animations | In Progress | Mesh, Skeleton, and sequences exist; no Orc AnimBP or Montage was found. Enemy directly plays sequences. |
-| Wave Manager | Not Verified | `/Game/Blueprints/Systems/BP_WaveManager` exists and is saved, but no compile/PIE behavior evidence was established in this audit. |
-| Boss | Not Started | No `/Game/**/BP_Boss` asset found; no two-pattern boss evidence. |
+| Wave Manager | In Progress | `/Game/Blueprints/Systems/BP_WaveManager` now drives 3 waves: Wave1 = 3 goblins, Wave2 = 2 orcs, Wave3 = 1 boss (`BP_Boss`, new 2026-07-28), all routed through the same shared `OnDestroyed_이벤트` custom event with a chained `CompareInt(CurrentWave)` ladder (1→spawn wave2, 2→spawn boss, >2→`OnAllWavesCleared`). New `Wave3Count=1` variable. Compiled/saved; earlier real-PIE evidence for the Wave1→Wave2 counting mechanism still holds, but the new Wave2→boss and boss→`OnAllWavesCleared` transitions are structural-only, not yet PIE-proven. |
+| Boss | In Progress | `/Game/Blueprints/Enemies/BP_Boss` created 2026-07-28 using Paragon: Rampage (`/Game/ParagonRampage/...`) per `prompts/08_Boss.md` spec: Health 350, Slash (`Attack_Melee_A`) / Slam (`Ability_GroundSmash_Start`) via 65/35 weighted random, PhaseChange at 50% HP (`Ability_Enrage_Start` + `AttackSpeedMultiplier=0.8` applied to windup/hit-delay/recovery timers), `Death_A` death anim + `OnBossDeath` event dispatcher, non-instant death (SetLifeSpan 5.0, same lying-down pattern as Enemy/Goblin). Projectile omitted (no ranged anim in asset, user-approved). Now wired into `BP_WaveManager` as Wave3 (see Wave Manager row below) instead of standing alone; the standalone L_Test placement was removed. Compiled/saved; no PIE damage/animation proof yet (structural only). Slam is currently single-target, not an AOE despite the name — candidate follow-up. |
 | HUD | Verified Complete | Saved `/Game/UI/WBP_PlayerHUD` is attached once to `BP_XRPawn.MotionControllerLeftGrip`; BeginPlay and post-damage event paths update the green bar and `Current / Max` text. PIE exercised health `100→55`. Physical Quest readability remains. |
 | Victory/defeat | Not Started | No verified flow. |
 | Quest build | Not Verified | Android packaging/toolchain not tested. |
@@ -59,6 +59,7 @@ Last live audit: 2026-07-28 (Unreal MCP, editor state read-only)
 - Goblin: `/Game/Blueprints/Enemies/BP_Goblin`
 - Damage Dummy: `/Game/Blueprints/Enemies/BP_DamageDummy`
 - Damage interface: `/Game/Blueprints/Interfaces/BPI_Damage2`
+- Boss: `/Game/Blueprints/Enemies/BP_Boss` (Paragon: Rampage mesh/skeleton/animations under `/Game/ParagonRampage/`)
 - Enemy HP widget: `/Game/UI/WBP_EnemyHealthBar`
 - Wave Manager: `/Game/Blueprints/Systems/BP_WaveManager`
 - Maps: `/Game/Maps/L_Test`, `/Game/Maps/L_Dungeon`, `/Game/Maps/L_Arena`, `/Game/Maps/Sublevels/L_Dungeon_Gameplay`
