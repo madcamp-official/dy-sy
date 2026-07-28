@@ -1,5 +1,14 @@
 # AI Memory
 
+## 2026-07-28 Enemy awareness and idle patrol
+
+- Increased `SenseRadius` and the `SenseSphere` radius from 800 cm to 1500 cm on `/Game/Blueprints/Enemies/BP_Enemy` and `/Game/Blueprints/Enemies/BP_Goblin`.
+- Added `IdlePatrolStep` to both normal-enemy Blueprints. A one-time Tick initializer starts a 0.25-second looping timer; the Tick path performs no repeated work after initialization.
+- While `TargetActor` is invalid, enemies move forward at about 20 cm/s, apply a small random yaw change, and use swept movement so they slowly wander and look around instead of standing still.
+- Idle patrol immediately stops contributing movement after a player target is acquired. Existing chase, attack, damage, health, collision, and death logic was preserved.
+- Both Blueprints compiled with warnings treated as errors and were saved.
+- L_Test PIE ran for five seconds with no new Blueprint Runtime Error or Accessed None. Final movement feel and 15 m acquisition distance should still be checked in VR.
+
 ## 2026-07-28 HUD distance and HP GUI correction
 
 - Player HUD camera distance changed from 110 cm to 70 cm.
