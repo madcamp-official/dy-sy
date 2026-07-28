@@ -1,5 +1,86 @@
 # Project Memory
 
+## 2026-07-28 Fireball input repeat fix and player HUD visibility disable
+
+- Modified and saved only `/Game/XRFramework/Blueprints/BP_XRPawn`.
+- Fireball spawning remains connected to `IA_Grab_Left_Pressed`, but execution now starts from the action's one-shot `Started` output instead of the continuously evaluated `Triggered` output.
+- Existing `IsDead` gate, `FireballSpawnPoint`, SpawnActor transform, Fireball class, and player death/restart flow were preserved.
+- `PlayerHUDWidget` still uses `/Game/UI/WBP_PlayerHUD` and its BeginPlay/post-damage update logic remains active.
+- Set only `PlayerHUDWidget.bHiddenInGame=true`, so the HUD is invisible during play without deleting its component, widget class, health values, or update functions.
+- `BP_XRPawn` compiled with warnings treated as errors and saved successfully.
+- A five-second L_Test PIE run with no input found zero `BP_Fireball` actors.
+- Runtime `PlayerHUDWidget` reported `bHiddenInGame=true` while retaining `WBP_PlayerHUD` as its widget class.
+- No Blueprint Runtime Error, Accessed None, Compile Error, or Broken Reference was logged.
+- `/Game/Maps/L_Test` and all teammate-owned enemy/boss assets were not modified or saved.
+
+## 2026-07-28 Minimal Player HUD — verified complete
+
+- Created and saved `/Game/UI/WBP_PlayerHUD`; the existing enemy-owned `WBP_EnemyHealthBar` was not reused or modified.
+- The HUD contains only a green `HealthProgressBar` and centered `HealthText` in `Current / Max` form.
+- Added `SetPlayerHealth(CurrentHealth, MaxHealth)` to the widget. It branches before division when `MaxHealth <= 0`, then updates the bar and rounded whole-number text.
+- Added one world-space `PlayerHUDWidget` component to `/Game/XRFramework/Blueprints/BP_XRPawn`.
+- The component is attached to `MotionControllerLeftGrip` at relative location `(0,0,10)`, rotation `(0,90,90)`, scale `(0.08,0.08,0.08)`, draw size `240x80`, transparent/two-sided, and receives no hardware input.
+- Added event-driven `UpdatePlayerHUD` in `BP_XRPawn`. It safely casts the Widget Component user widget to `WBP_PlayerHUD`; cast failure has no side effects.
+- `UpdatePlayerHUD` runs once from BeginPlay and immediately after the existing `CurrentHealth` setter in `BPI_Damage2.ApplyDamage`. No player or widget Tick polling was added.
+- `WBP_PlayerHUD` and `BP_XRPawn` compiled with warnings treated as errors and were saved successfully.
+- L_Test PIE spawned exactly one `BP_XRPawn` with one `PlayerHUDWidget`. Runtime damage changed player health from `100` to `55`, exercising the existing post-damage HUD refresh path.
+- No Blueprint Runtime Error, Accessed None, Compile Error, or Broken Reference was logged.
+- Existing `IsDead`, two-second automatic current-level restart, alive-only movement/Fireball gates, death Sword shutdown, and XR hierarchy were preserved.
+- `/Game/Maps/L_Test`, Enemy, Goblin, enemy HP bar, AI, animation, Wave Manager, boss, and damage interface assets were not modified or saved.
+- Physical Quest/HMD confirmation of wrist orientation, size, and readability remains required.
+
+## 2026-07-28 Automatic Restart on Player Death — verified complete
+
+- Modified and saved only `/Game/XRFramework/Blueprints/BP_XRPawn`.
+- Added `IsDead` (`bool`, default `false`) and `DeathRestartDelay` (`float`, default `2.0`).
+- Existing `BPI_Damage2.ApplyDamage` flow subtracts Damage, clamps and sets `CurrentHealth`, then checks `CurrentHealth <= 0`.
+- Zero health checks `IsDead`; only the false branch sets `IsDead=true`, so death and restart are requested once.
+- Death disables Sword damage through `EquippedSword -> GetChildActor -> SetActorEnableCollision(false)` without modifying `BP_Sword`.
+- `IA_Move.Triggered` and the Fireball input `IA_Grab_Left_Pressed.Triggered` use `IsDead` branches; only the false/alive branch reaches locomotion or Fireball SpawnActor.
+- HMD, Camera, MotionController, hand hierarchy, and tracking components were not disabled or rewired.
+- One non-looping `SetTimerByFunctionName` calls `RestartCurrentLevel` after `DeathRestartDelay`.
+- `RestartCurrentLevel` uses `GetCurrentLevelName -> OpenLevel(by Name)` with no restart input.
+- `BP_XRPawn` compiled with warnings treated as errors, saved successfully, and reports `dirty=false`.
+- PIE used a temporary unsaved BeginPlay path calling the existing `ApplyDamage(100)` after 5 seconds. Runtime reached `CurrentHealth=0`, `IsDead=true`; L_Test actually reloaded every 7 seconds (5-second test trigger plus the real 2-second death timer).
+- The temporary nodes were removed. Final PIE starts at `CurrentHealth=100`, `MaxHealth=100`, `IsDead=false`, `DeathRestartDelay=2`.
+- Final PIE pawn transform exactly matched L_Test `PlayerStart`: location `(240,400,130)`, rotation `(0,-90,0)`, scale `(1,1,1)`.
+- No Blueprint Runtime Error, Accessed None, Compile Error, or Broken Reference was logged. L_Test was not saved.
+- Physical movement/Sword/Fireball input gating and packaged Quest reload remain manual device checks.
+
+## 2026-07-28 Team ownership and current task
+
+- Automatic Restart on Player Death is complete in editor validation.
+- Primary target is `/Game/XRFramework/Blueprints/BP_XRPawn`.
+- When player health reaches zero, the intended flow is: enter death once, block player control, wait for one short non-looping timer, then automatically reload the current level. No restart input or defeat widget is required by this task.
+- Successful restart must return the player to the initial PlayerStart with full starting health and reset level state.
+- Enemy and boss work is now teammate-owned. Do not modify or save `BP_Enemy`, `BP_Goblin`, `WBP_EnemyHealthBar`, enemy health/death/collision/AI/animation assets, `BP_WaveManager`, or teammate-owned boss assets without explicit coordination.
+- `/Game/Maps/L_Test` remains test-only and must not be saved because it contains an existing uncommitted change.
+
+## 2026-07-28 Fireball hit-VFX removal
+
+- Modified only `/Game/Blueprints/Magic/BP_Fireball`; no Enemy, Goblin, HP-bar, AI, animation, or map asset was changed or saved.
+- Removed the red hit-effect spawn using `/Game/Free_Magic/VFX_Niagara/NS_Free_Magic_Hit1`.
+- Successful valid-target flow now applies `BPI_Damage2.ApplyDamage` without destroying the Fireball; Damage remains `25`.
+- The traveling effect remains `/Game/Free_Magic/VFX_Niagara/NS_Free_Magic_Attack2` on `ProjectileFX` at uniform scale `0.2`.
+- Enemy overlap does not end or replace the traveling effect. The Fireball continues moving with the same green effect until its unchanged `InitialLifeSpan=4.0` expires.
+- `BP_Fireball` compiled with warnings treated as errors, saved successfully, and reports `dirty=false`.
+- L_Test PIE started successfully with no Blueprint Runtime Error, Accessed None, Compile Error, or Broken Reference. Physical controller firing and the exact visual result still require VR Preview/Quest confirmation.
+- After PIE, `/Game/Maps/L_Test` reported dirty. It was not saved; preserve the existing teammate/uncommitted map state.
+
+## 2026-07-28 Read-only live audit
+
+- Connected Unreal MCP is responsive. Current map is `/Game/Maps/L_Test`; PIE is stopped.
+- L_Test World Settings uses `/Game/XRFramework/Blueprints/BP_XRGameMode`, whose default pawn is `/Game/XRFramework/Blueprints/BP_XRPawn`.
+- L_Test has `bEnableNavigationSystem=false`; no asset matching `NavMesh` was found.
+- The following audited assets exist and report `dirty=false`: `BP_XRPawn`, `BP_Sword`, `BP_Fireball`, `BP_SwordWave`, `BP_Enemy`, `BP_Goblin`, `BP_DamageDummy`, `BPI_Damage2`, `WBP_EnemyHealthBar`, `BP_WaveManager`, and `L_Test`.
+- Git independently reports `Content/Maps/L_Test.umap` modified. Preserve it and do not save over it until ownership is reconciled.
+- Current logs contain no Blueprint Runtime Error, Accessed None, Compile Error, or Broken Reference match. They do contain two compiler warnings in `/Game/Swampgoblin/Mesh/ABP_Goblin`: its state-machine entry is not connected.
+- Fireball and Sword saved damage paths exist; the earlier statements that Fireball/SwordWave were missing and that Sword damage had no effective interface call are obsolete.
+- End-to-end Sword/Fireball damage against a real Enemy, visible HP-bar reduction, and enemy death remain unverified.
+- `/Game/Blueprints/Systems/BP_WaveManager` exists but behavior is not verified. No `BP_Boss` asset was found.
+- Orc exact assets: mesh `/Game/Orc/Mesh/SK_Orc_brown`, Skeleton `/Game/Orc/Mesh/SK_Orc_all_Skeleton`, sequences `/Game/Orc/Animations/axe_run` and `/Game/Orc/Animations/axe_crit1`. No Orc Animation Blueprint or Montage was found.
+- Git is on `main` at `91e2e3138ba17d274c5eda601f578f7381a40c18`. `dy-sy/` is an untracked nested repository; no `.gitmodules` is present. This replaces the stale claim that it is a tracked mode-160000 gitlink.
+
 ## Project
 
 - Unreal Engine 5.8
