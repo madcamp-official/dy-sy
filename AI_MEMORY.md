@@ -1,5 +1,19 @@
 # AI Memory
 
+## 2026-07-28 HUD distance and HP GUI correction
+
+- Player HUD camera distance changed from 110 cm to 70 cm.
+- HP now uses both GUI Parts `Hp_frame` and `Hp_line`.
+- `WBP_PlayerHUD` and `BP_XRPawn` compiled and saved; L_Test was not saved.
+- PIE exposed an unrelated existing invalid `BP_Fireball` reference in `HandleProjectileOverlap`; no Fireball or enemy asset was changed.
+
+## 2026-07-28 Compact Player HUD
+
+- `/Game/UI/WBP_PlayerHUD`, `/Game/UI/RT_PlayerMiniMap`, and `/Game/XRFramework/Blueprints/BP_XRPawn` were compiled/saved as applicable.
+- HUD includes event-driven HP, triangle-only nearby-enemy warning, three independent charge bars, and a hidden-by-default minimap toggled from `IA_Menu_Toggle_Right.Started`.
+- L_Test PIE produced no new Blueprint Runtime Error or Accessed None. L_Test was not saved.
+- Next player-owned task: left-hand charge Aura. Do not modify teammate-owned enemy/boss assets.
+
 ## 현재 단계
 (2026-07-28 세션 추가 #10) 사용자가 세션 #9(Codex)의 조사 결과를 전달하며 "피격 시 감소 로직 추가 + 완전 안 보임 해결 + 죽으면 바닥에 쓰러지게" 요청 → **전부 수정 완료**:
 - **사망 연출 추가(원래 즉시 DestroyActor라 요청했던 "바닥에 쓰러져 있기"가 전혀 없었음)**: `HandleDamage`의 사망 분기에서 `DestroyActor` 즉시 호출을 제거하고, 대신 `SetMovementMode(MOVE_None)` → 캡슐 `SetCollisionEnabled(NoCollision)` → (오크: `PlayAnimation(axe_dead1, loop=false)` / 고블린: 스켈레톤에 이미 있던 `PHYS_swampgoblin_PhysicsAsset`를 이용해 `SetCollisionProfileName(Ragdoll)` + `SetSimulatePhysics(true)`로 레그돌 낙하) → `SetLifeSpan(self, 4.0)`(4초 뒤 자동 파괴, WaveManager의 OnDestroyed 카운팅은 그대로 유지됨) 순서로 재구성. 고블린은 전용 사망 애니메이션 에셋이 프로젝트에 없어서(오크는 `axe_dead1`/`axe_dead2` 존재) 레그돌 낙하를 선택함. 양쪽 컴파일 에러 없음, 저장 완료.
