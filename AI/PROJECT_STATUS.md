@@ -1,5 +1,15 @@
 # Project Status
 
+## 2026-07-28 Compact Player HUD completion
+
+- Status: **Verified Complete in editor/PIE**.
+- Saved assets: `/Game/UI/WBP_PlayerHUD`, `/Game/UI/RT_PlayerMiniMap`, `/Game/XRFramework/Blueprints/BP_XRPawn`.
+- Features: event-driven HP, timer-driven warning triangle, three independent magic charge bars, hidden-by-default orthographic minimap, and one-toggle-per-press right-controller input.
+- Both modified Blueprints compiled with warnings treated as errors.
+- L_Test PIE spawned `PlayerHUDWidget`, `HUDEnemyWarningRange`, and `MiniMapCapture` and produced no new Blueprint Runtime Error or Accessed None.
+- L_Test was not saved. Physical Quest readability and input remain device checks.
+- Recommended next player-owned task: left-hand charge Aura.
+
 Last live audit: 2026-07-28 (Unreal MCP, editor state read-only)
 
 ## Environment

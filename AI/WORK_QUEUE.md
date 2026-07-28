@@ -12,7 +12,8 @@ Last synchronized: 2026-07-28 live audit
 - [x] Sword attachment
 - [x] Automatic level restart on player death
 - [x] Minimal player HUD
-- [ ] CURRENT: Compact GUI Parts Player HUD (layout assembled; save and runtime wiring still required)
+- [x] Compact GUI Parts Player HUD
+- [ ] CURRENT: Left-hand charge Aura
 
 ## P0 — current gameplay blocker
 

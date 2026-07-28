@@ -1,5 +1,29 @@
 # Project Memory
 
+## 2026-07-28 HUD distance and HP GUI correction
+
+- Moved `BP_XRPawn.PlayerHUDWidget` from 110 cm to 70 cm in front of the camera.
+- Kept `/Game/GuiParts/UiElements/Hp_frame` on the HP frame.
+- Applied `/Game/GuiParts/UiElements/Hp_line` as the `HealthProgressBar` fill image, with white tint and left-to-right masked fill.
+- Compiled and saved only `/Game/UI/WBP_PlayerHUD` and `/Game/XRFramework/Blueprints/BP_XRPawn`.
+- L_Test was not saved and teammate-owned assets were not modified.
+- PIE started successfully. An existing `BP_Fireball.HandleProjectileOverlap` invalid-reference runtime error occurred independently of the HUD change; it was not modified in this task.
+
+## 2026-07-28 Compact GUI Parts Player HUD — complete
+
+- Reused and saved `/Game/UI/WBP_PlayerHUD`; no duplicate HUD widget was created.
+- Reused GUI Parts: `Hp_frame`, `lil_roundframe_ready2`, `skill_icon_01_nobg`–`skill_icon_03_nobg`, `Mini_background`, and `Mini_frame2`.
+- The camera-attached curved world-space HUD keeps the center clear and places warning/HP/magic/minimap in the four corners.
+- HP still uses `CurrentHealth` and `MaxHealth`, updating from the existing BeginPlay and post-damage event paths without Tick.
+- Added `MagicSlot1Charge`, `MagicSlot2Charge`, and `MagicSlot3Charge` with independently updated bars.
+- Added player-owned `HUDEnemyWarningRange`; a 0.35-second timer drives a triangle-only warning blink without changing enemy assets.
+- Added `/Game/UI/RT_PlayerMiniMap` and player-owned orthographic `MiniMapCapture`. The minimap starts hidden.
+- `IA_Menu_Toggle_Right.Started` toggles the minimap once per press, so holding does not repeat.
+- `WBP_PlayerHUD` and `BP_XRPawn` compiled with warnings treated as errors. HUD, render target, and pawn assets were saved.
+- L_Test PIE spawned the expected HUD components and added no Blueprint Runtime Error or Accessed None.
+- `/Game/Maps/L_Test` was not saved. Teammate-owned and Marketplace source assets were not modified.
+- Physical Quest checks remain for readability, controller mapping, and final minimap appearance.
+
 ## 2026-07-28 Fireball input repeat fix and player HUD visibility disable
 
 - Modified and saved only `/Game/XRFramework/Blueprints/BP_XRPawn`.
