@@ -1,135 +1,93 @@
 # Project Status
 
-## Overall progress
+Last live audit: 2026-07-28 (Unreal MCP, editor state read-only)
 
-| System | Status | Evidence / next requirement |
+## Environment
+
+- Project: `C:\UnrealProjects\dy\dy.uproject`
+- Engine association: Unreal Engine 5.8
+- Current map: `/Game/Maps/L_Test`
+- GameMode: `/Game/XRFramework/Blueprints/BP_XRGameMode`
+- Default Pawn: `/Game/XRFramework/Blueprints/BP_XRPawn`
+- PIE: stopped
+- Unreal MCP: connected and responsive
+- Unreal dirty state: audited gameplay assets and `/Game/Maps/L_Test` report `dirty=false`; Git nevertheless reports `Content/Maps/L_Test.umap` modified on disk.
+- Current log: no Blueprint Runtime Error, Accessed None, Compile Error, or Broken Reference match. `ABP_Goblin` has two compiler warnings because its state-machine entry is not connected. OpenXR also reports unavailable controller/eye-gaze extensions.
+
+## Systems
+
+| System | Status | Exact evidence / missing proof |
 |---|---|---|
-| Damage System (`BPI_Damage2`) | Verified complete | Saved compile and L_Test PIE evidence: 100 → 50 → destroyed on the damage dummy. |
-| Player health | Verified complete | Saved compile and L_Test PIE evidence: 100 → 50 → 0 while the pawn remains alive. |
-| XR pawn spawn | Verified complete | `SpawnCollisionHandlingMethod=AlwaysSpawn`; pawn and equipped sword were observed in PIE. |
-| Left-stick smooth locomotion | Verified complete in editor | Graph compiled and in-process PIE started without new runtime errors; physical Quest input remains unverified. |
-| Right-stick turning disabled | Verified complete structurally | `IA_Turn` has no active mappings; physical controller confirmation remains. |
-| L_Test enemy visibility | Verified complete in editor | Existing enemy reused and visible; enemy combat was not modified. |
-| Sword Combat | Blocked | `BP_Sword` exists, but prior inspection found `TrySwordDamage` lacks a valid execution/damage path; fast-hit damage PIE evidence is absent. |
-| Player Magic and Sword VFX Package | In progress — partially implemented | `BP_Fireball` and `BP_SwordWave` are created, compiled, and saved. PIE behavior is not verified; input, charge, trail, and sword integration remain blocked. |
-| Player death and restart | Not started | Follows the current VFX package. |
-| HUD | Not started | Follows player death and restart. |
-| Boss combat | Not started | Boss patterns and validation remain. |
-| Victory and defeat | Not started | Requires game-state flow and restart validation. |
-| Quest build and device test | Not started | Requires Android/Quest toolchain and physical device validation. |
+| Damage System / `BPI_Damage2` | Verified Complete | `/Game/Blueprints/Interfaces/BPI_Damage2` exists and is saved; prior saved compile plus L_Test PIE damage-dummy 100→50→destroy evidence is retained. |
+| Player health | Verified Complete | `BP_XRPawn` saved; prior compile and L_Test PIE evidence records 100→50→0 without pawn destruction. |
+| Player death | Verified Complete | Saved `BP_XRPawn` compile and PIE evidence: `CurrentHealth=0` sets `IsDead=true` once and gates player gameplay actions. Physical Quest input confirmation remains. |
+| Restart | Verified Complete | One non-looping 2-second timer calls `RestartCurrentLevel`; PIE logs prove actual L_Test reloads and final PIE starts at health 100 with `IsDead=false`. |
+| Left-stick movement | Verified Complete | Saved graph and prior PIE movement evidence; physical Quest input remains unverified. |
+| Right-stick turning | Verified Complete | `IA_Turn` mappings were structurally removed; physical controller confirmation remains. |
+| HMD/controller tracking | Not Verified | XR hierarchy exists and prior PIE spawned the pawn; physical OpenXR tracking was not audited on a headset. |
+| Sword attachment | Verified Complete | Prior PIE observed equipped sword on spawned pawn. |
+| Sword collision | In Progress | Saved overlap wiring was re-inspected previously; no current physical-hit PIE proof. |
+| Sword speed | In Progress | Saved threshold is 100 cm/s; no current physical swing proof. |
+| Sword damage | In Progress | Saved `TrySwordDamage` calls `BPI_Damage2.ApplyDamage` for 15 after the speed gate; prior “disconnected” note is obsolete, but successful current damage PIE proof is absent. |
+| Sword Trail | Not Started | No verified Niagara trail component/activation. |
+| Sword Wave | In Progress | `/Game/Blueprints/Weapons/BP_SwordWave` exists, saved and previously compiled; launch integration and damage PIE evidence are absent. |
+| Left-hand magic Aura | Not Started | No verified charge Aura integration. |
+| Fireball input/spawn | In Progress | `BP_XRPawn` has saved `FireballSpawnPoint` and SpawnActor wiring; physical button firing is not verified. |
+| `BP_Fireball` movement | In Progress | Saved ProjectileMovement at 1500 cm/s and lifespan 4; runtime travel/expiry is not conclusively verified. |
+| Fireball collision/damage | In Progress | Previously repaired overlap execution reaches 25-damage BPI chain; no successful enemy damage PIE proof. |
+| Fireball hit effect | In Progress | Saved hit-effect wiring exists; runtime visual proof is absent. |
+| Enemy HP bar | In Progress | Enemy/Goblin own saved Screen-space `WBP_EnemyHealthBar` components and PIE showed full initial values; damage-driven visual reduction is unverified. |
+| `BP_Enemy` health/death | In Progress | Saved 60/60 health and damage/death logic; runtime damage-to-zero proof is absent. |
+| `BP_Enemy` AI/animation | In Progress | Prior Simulate PIE showed movement, attack-state recovery, `axe_run`, and `axe_crit1`; navigation is disabled in L_Test and final combat behavior is unverified. |
+| `BP_Goblin` health/death | In Progress | Saved 40/40 health/death logic; runtime damage-to-zero proof is absent. |
+| `BP_Goblin` AI/animation | Broken | Prior PIE showed movement/run pose, but current log has two `ABP_Goblin` disconnected state-machine compiler warnings. Blueprint currently forces `ThirdPersonRun`, so the asset warning remains unresolved. |
+| Orc assets/animations | In Progress | Mesh, Skeleton, and sequences exist; no Orc AnimBP or Montage was found. Enemy directly plays sequences. |
+| Wave Manager | Not Verified | `/Game/Blueprints/Systems/BP_WaveManager` exists and is saved, but no compile/PIE behavior evidence was established in this audit. |
+| Boss | Not Started | No `/Game/**/BP_Boss` asset found; no two-pattern boss evidence. |
+| HUD | Verified Complete | Saved `/Game/UI/WBP_PlayerHUD` is attached once to `BP_XRPawn.MotionControllerLeftGrip`; BeginPlay and post-damage event paths update the green bar and `Current / Max` text. PIE exercised health `100→55`. Physical Quest readability remains. |
+| Victory/defeat | Not Started | No verified flow. |
+| Quest build | Not Verified | Android packaging/toolchain not tested. |
+| Quest device test | Not Started | No physical-device evidence. |
 
-## Current focus
+## Important assets
 
-**Player Magic and Sword VFX Package**
+- Pawn: `/Game/XRFramework/Blueprints/BP_XRPawn`
+- Sword: `/Game/Blueprints/Weapons/BP_Sword`
+- Fireball: `/Game/Blueprints/Magic/BP_Fireball`
+- Sword Wave: `/Game/Blueprints/Weapons/BP_SwordWave`
+- Enemy: `/Game/Blueprints/Enemies/BP_Enemy`
+- Goblin: `/Game/Blueprints/Enemies/BP_Goblin`
+- Damage Dummy: `/Game/Blueprints/Enemies/BP_DamageDummy`
+- Damage interface: `/Game/Blueprints/Interfaces/BPI_Damage2`
+- Enemy HP widget: `/Game/UI/WBP_EnemyHealthBar`
+- Wave Manager: `/Game/Blueprints/Systems/BP_WaveManager`
+- Maps: `/Game/Maps/L_Test`, `/Game/Maps/L_Dungeon`, `/Game/Maps/L_Arena`, `/Game/Maps/Sublevels/L_Dungeon_Gameplay`
+- Connected Niagara: Fireball uses `/Game/Free_Magic/VFX_Niagara/NS_Free_Magic_Attack2` and Hit1; Sword Wave uses Slash and Hit2. Aura and Projectile1 exist but are not verified as currently connected.
+- Orc mesh: `/Game/Orc/Mesh/SK_Orc_brown`
+- Orc Skeleton: `/Game/Orc/Mesh/SK_Orc_all_Skeleton`
+- Orc AnimBP: Not Found
+- Orc sequences currently used: `/Game/Orc/Animations/axe_run`, `/Game/Orc/Animations/axe_crit1`
+- Orc Montages: Not Found
 
-Scope:
+## Blockers
 
-- left-hand magic charge VFX
-- `BP_Fireball`
-- sword trail
-- `BP_SwordWave`
-- combat hit effects
+- P0: Combat cannot yet be called playable: successful Sword/Fireball damage, HP-bar reduction, and enemy death have no current end-to-end PIE evidence.
+- P1: No boss or victory/defeat presentation flow.
+- P1: L_Test has navigation disabled (`bEnableNavigationSystem=false`) and no NavMesh asset was found; navigation-dependent AI remains at risk.
+- P1: `ABP_Goblin` emits two disconnected state-machine compiler warnings.
+- P1: `Content/Maps/L_Test.umap` is modified in Git although the loaded asset reports clean; do not overwrite it without reconciling ownership.
+- P1: Quest/Android packaging and device input/tracking are unverified; OpenXR logs missing controller and eye-gaze extensions in the desktop session.
+- P2: `dy-sy/` is an untracked nested repository and there is no `.gitmodules`; prior “mode 160000 gitlink” documentation was stale.
+- P2: Git LFS status identifies the modified map as `LFS: 4381282 -> File: a91e5d5`; full `lfs fsck` did not finish within the audit command timeout.
 
-Current status is planning/inspection only. Nothing in this package is marked complete.
+## Recommended next task
 
-## 2026-07-27 live Unreal MCP inspection
+Implement only the player-owned left-hand charge Aura first. Preserve the completed HUD and automatic restart flow, and do not modify teammate-owned enemy or boss assets.
 
-- Unreal MCP connection: available.
-- PIE running: false.
-- Open assets: none.
-- Content Browser path: `/Game/Free_Magic/VFX_Niagara`.
-- Existing and clean: `BP_XRPawn`, `BP_Sword`, `BPI_Damage2`, and all five required Niagara systems.
-- Missing: `/Game/Blueprints/Magic/BP_Fireball`, `/Game/Blueprints/Weapons/BP_SwordWave`.
-- `BP_XRPawn` components include the existing tracked hands/controllers and `EquippedSword`, but no package Niagara component.
-- `BP_Sword` components are the existing `KRYVEN_BLADE` mesh and `SwordCollision`; no trail component.
-- `/Game/Maps/L_Test` exists but was dirty. This documentation-only task did not save or alter it.
+## Completed minimal-player-HUD task record
 
-## Status definitions
+Created `/Game/UI/WBP_PlayerHUD` with only a green health bar and `Current / Max` text. Added one world-space `PlayerHUDWidget` under `BP_XRPawn.MotionControllerLeftGrip` and an event-driven `UpdatePlayerHUD` call at BeginPlay and directly after player health changes. Both assets compile with warnings as errors and are saved. L_Test PIE exercised the damage path from health `100` to `55` without Blueprint runtime errors. L_Test and teammate-owned assets were not saved. Wrist readability/orientation still requires Quest verification.
 
-- **Verified complete:** compiled, saved, and supported by relevant PIE evidence.
-- **In progress:** active scope is defined or partially implemented, but completion evidence is missing.
-- **Not started:** no implementation evidence exists.
-- **Blocked:** implementation or verification cannot complete until a known defect or dependency is resolved.
+## Completed automatic-restart task record
 
-
-## 2026-07-27 Independent projectile update
-
-- [x] BP_Fireball created, compiled with warnings as errors, and saved.
-- [x] BP_SwordWave created, compiled with warnings as errors, and saved.
-- [x] Required projectile/travel and hit Niagara assets assigned.
-- [x] Structural duplicate-damage guards implemented.
-- [ ] PIE movement, collision damage, visible hit effect, and destruction evidence — temporary unsaved instances were not observable in the PIE world; Fireball DamageDummy health remained 100.
-- [ ] BP_XRPawn input spawning and left-hand integration — blocked by existing graph inspection limits.
-- [ ] BP_Sword trail and sword-wave spawning integration — blocked by existing graph inspection limits.
-- Maps and restricted Blueprints were not saved.
-
-## 2026-07-27 Fireball spawn/size correction
-
-- [x] Spawn transform follows MotionControllerLeftAim with a deterministic 25 cm forward offset.
-- [x] NS_Free_Magic_Attack2 component scale verified at 0.5 uniform.
-- [x] Collision radius reduced to 14 cm.
-- [x] BP_XRPawn and BP_Fireball compile/save passed; PIE had no runtime error or Accessed None.
-- [ ] Physical VR firing validation for repeated placement, aim direction, visible size, and travel.
-
-## 2026-07-27 Fireball visual consistency follow-up
-
-- [x] SpawnActor input re-verified as `FireballSpawnPoint.GetWorldTransform`.
-- [x] Spawn point re-verified under `MotionControllerLeftAim` at deterministic relative transform: location `(25,0,0)`, rotation `(0,0,0)`, scale `(1,1,1)`.
-- [x] Removed the `ProjectileFX` local X offset of `-20`; the visible Niagara effect now shares the fireball/collision origin.
-- [x] Niagara component rotation is zero and uniform scale is fixed at `0.5`.
-- [x] Collision sphere remains `14 cm`, matching the reduced visual size.
-- [x] Damage `25`, speed `1500`, lifespan `4`, hit effect, `BPI_Damage2`, and gameplay logic were preserved.
-- [x] `BP_Fireball` and `BP_XRPawn` compile/save passed; L_Test PIE produced no Blueprint Runtime Error, Accessed None, Compile Error, or Broken Reference.
-- [ ] Repeated physical controller firing still requires VR Preview/Quest because MCP cannot inject the OpenXR button input.
-
-## 2026-07-27 Enemy world-space HP bar
-
-- [x] Existing `WBP_EnemyHealthBar` inspected and reused; it displays `CurrentHealth / MaxHealth` through `HealthProgressBar`.
-- [x] `BP_DamageDummy` now owns a Screen-space `HealthBarWidget` at Z `120`.
-- [x] Existing `BP_Enemy.HealthBarWidget` confirmed at Z `220` and configured with the same WBP.
-- [x] Screen widget space guarantees camera-facing presentation without actor Tick rotation.
-- [x] Both damage handlers update the widget immediately after `Set CurrentHealth`; original damage, zero check, and Destroy paths are preserved.
-- [x] Widget, Dummy, and Enemy compile/save passed.
-- [x] PIE confirmed runtime Widget Components and initial full ratios: Dummy `100/100`, Enemy `40/40`.
-- [x] No Blueprint Runtime Error, Accessed None, Compile Error, or Broken Reference.
-- [ ] Fireball hit reduction was not reproduced by the MCP temporary-projectile test.
-- [ ] Sword reduction is blocked by the known incomplete `BP_Sword.TrySwordDamage`.
-- [ ] Runtime zero-before-Destroy and widget disappearance require a successful damage-to-zero test.
-
-## 2026-07-27 Enemy HP bar scope correction
-
-- [x] Final scope restricted to `BP_Enemy` and `BP_Goblin`.
-- [x] `BP_DamageDummy.HealthBarWidget` removed.
-- [x] DamageDummy WBP refresh nodes removed and original health/damage/Destroy execution restored.
-- [x] WBP DamageDummy branch removed; Enemy and Goblin `CurrentHealth / MaxHealth` branches retained.
-- [x] Enemy and Goblin use `WBP_EnemyHealthBar`, Screen space, `150x20`, Z `220`.
-- [x] Enemy and Goblin refresh immediately after `Set CurrentHealth`.
-- [x] All four requested assets compile/save passed.
-- [x] PIE: Enemy `40/40` with widget; three Goblins `40/40` with widgets; DamageDummy `100/100` with no widget.
-- [x] No Blueprint Runtime Error, Accessed None, Compile Error, or Broken Reference.
-- [ ] A physical damage hit and visible bar reduction were not reproduced in this PIE run.
-
-## 2026-07-28 HP bar and attack follow-up
-
-- [x] Enemy/Goblin BeginPlay no longer re-enables Draw at Desired Size.
-- [x] Runtime bars retain fixed `200x24`, Screen space, Z `220`, and visible state.
-- [x] Fireball overlap now enters the existing BPI damage execution chain.
-- [x] Sword overlap and speed-gated BPI damage wiring was re-verified.
-- [x] Enemy, Goblin, Fireball, and Sword compile/save passed.
-- [ ] Final physical VR attack and headset-view confirmation remains required.
-
-## 2026-07-28 Enemy animation
-
-- [x] Goblin uses its existing `ABP_Goblin` at runtime.
-- [x] Orc Enemy loops `axe_run` while moving.
-- [x] Orc Enemy plays `axe_crit1` during its existing attack and restores run after recovery.
-- [x] Existing chase and attack damage behavior is preserved.
-- [x] Compile/save and Simulate PIE passed without Blueprint runtime errors.
-- [ ] Final pacing and visual quality require VR Preview/Quest confirmation.
-
-## 2026-07-28 Animation follow-up
-
-- [x] Enemy and Goblin rotate toward movement (`Controller Yaw=false`, `Orient Rotation to Movement=true`).
-- [x] Goblin explicitly loops `ThirdPersonRun`; PIE visually confirmed a running pose.
-- [x] Orc run and attack sequences remain connected.
-- [x] Compile/save and PIE runtime checks passed without Blueprint errors.
+Implement Automatic Restart on Player Death using `/Game/XRFramework/Blueprints/BP_XRPawn`. Reuse the existing player-health path, enter death exactly once at zero health, block movement/combat, start one short timer, and automatically reload the current level so the game returns to its initial state without restart input. Compile/save only player-owned assets and verify death→automatic level restart→full starting health in L_Test PIE without saving the map. Enemy, Goblin, enemy HP-bar, AI, animation, Wave Manager, and boss assets are teammate-owned and must not be modified.

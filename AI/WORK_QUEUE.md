@@ -1,21 +1,47 @@
 # Work Queue
 
-## Complete
+Last synchronized: 2026-07-28 live audit
 
-1. [x] Damage System Completion
-2. [x] VR Player Health
+## Verified complete
 
-## Execution Order
+- [x] Damage System / `BPI_Damage2`
+- [x] Player health
+- [x] XR pawn spawn
+- [x] Left-stick locomotion
+- [x] Right-stick turning disabled
+- [x] Sword attachment
+- [x] Automatic level restart on player death
+- [x] Minimal player HUD
 
-3. [ ] Sword Combat — CURRENT_TASK
-4. [ ] Fireball Combat — NEXT_TASK
-5. [ ] Enemy Combat
-6. [ ] Boss Slash
-7. [ ] Boss Slam
-8. [ ] Game Flow
-9. [ ] HUD
-10. [ ] VFX / Audio
-11. [ ] Quest Preflight
-12. [ ] Quest Device Validation
-13. [ ] Final Regression
-14. [ ] Final Freeze
+## P0 — current gameplay blocker
+
+- [ ] CURRENT: Player Magic and Sword VFX Package
+
+## P1 — required prototype work
+
+- [ ] Finish magic Aura, Sword Trail, and Sword Wave launch integration
+- [ ] Victory and defeat flow
+
+## P1 — teammate-owned / coordination required
+
+- [ ] Enemy damage, death, HP-bar, collision, AI, and animation validation
+- [ ] Goblin AnimBP warning cleanup
+- [ ] Wave Manager behavior
+- [ ] Boss actor and pattern 1
+- [ ] Boss pattern 2
+- [ ] Boss health UI
+- [ ] L_Test navigation decision and NavMesh validation if required
+
+## P1 — external/device dependent
+
+- [ ] Android SDK and Quest packaging preflight
+- [ ] Quest build
+- [ ] Physical HMD/controller tracking and input test
+- [ ] Quest combat, UI, restart, victory, and defeat regression
+
+## P2 — repository and polish
+
+- [ ] Reconcile modified `Content/Maps/L_Test.umap` without discarding teammate work
+- [ ] Resolve untracked nested `dy-sy/` repository and missing `.gitmodules` policy
+- [ ] Complete Git LFS integrity check
+- [ ] Quest performance pass, VFX/audio polish, final freeze
