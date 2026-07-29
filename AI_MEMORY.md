@@ -11,6 +11,14 @@ User reported the same categories of problems again after earlier "fixes" this s
 - **Boss doesn't die no matter how much it's attacked**: `HandleDamage`'s death branch was traced node-by-node and found fully intact and structurally correct (health≤0 → `State=Dead`, `bIsDead=true`, `OnBossDeath` delegate, collision disabled, movement disabled, `Death_A` animation, `SetLifeSpan`, `OnEnemyDefeated` on the player). Not a logic bug — a balance bug. Confirmed via a subagent trace of `/Game/Blueprints/Weapons/BP_Sword.TrySwordDamage` that the player's sword deals a **flat 15 damage/hit** (`SwordDamage` variable, no scaling). Boss `MaxHealth` was 350 → ~24 hits to kill, which reads as "never dies" in a real fight. Reduced `MaxHealth`/`CurrentHealth` 350→180 (~12 hits, in line with Orc's own 15-damage attacks for comparison).
 
 All five fixes compiled clean and were saved (`save_assets` on `BP_Boss`, `BP_Enemy`, `BP_Goblin`, `BP_WaveManager`). **Still not verified live in PIE** — same standing tooling limitation as every prior round (boss is wave-spawned only, editor-placed actors don't run `BeginPlay`, `add_to_scene_from_class` is blocked during PIE). Everything above was verified by full graph tracing (`get_connected_subgraph` from each relevant event/function entry point, cross-checked against sibling Blueprints like the Orc for comparison), which is a stronger verification method than earlier rounds' partial/spot-check tracing, but is still not the same as an actual playtest.
+## 2026-07-29 Valid sword-hit Niagara effect
+
+- Confirmed `/Game/Knife_light/VFX/NE_attack05` exists and is a `NiagaraSystem`.
+- Updated `/Game/Blueprints/Weapons/BP_Sword.TrySwordDamage` so the hit effect is only eligible after the existing player exclusion, owner exclusion, and minimum sword-speed check pass.
+- Added `DoesObjectImplementInterface(BPI_Damage2)` before the existing `ApplyDamage` message. Non-damageable props and unrelated overlap actors now exit without receiving damage or spawning the effect.
+- On the valid interface branch, `ApplyDamage` runs first and then `SpawnSystemAtLocation(NE_attack05)` runs once at `OtherActor.GetActorLocation()`.
+- Player overlaps still exit at the existing `CastToBP_XRPawn` guard, so the new Niagara effect cannot trigger from hitting the player pawn.
+- `BP_Sword` compiled with warnings treated as errors and saved successfully. L_Test PIE reported no `Blueprint Runtime Error`, `Accessed None`, or `Broken Reference`. Physical sword-hit timing and the final effect scale/orientation still require VR/Quest visual confirmation.
 
 ## 2026-07-29 Robust sword self-damage prevention
 
