@@ -1,0 +1,34 @@
+{
+	"FileVersion": 3,
+	"Version": 1,
+	"VersionName": "1.0.1",
+	"FriendlyName": "Easy Text Animation (Free)",
+	"Description": "Free edition. Per-character animated text for UMG: 4 entrance effects (typewriter, fade in, slide up, wave) with easing, word-wrap (Thai-aware), drop shadow, justification, and a drag-and-drop preset showroom. No rich-text tags and no custom preset creation (Pro-only).",
+	"Category": "UI",
+	"CreatedBy": "Kitsana Puengsri",
+	"CreatedByURL": "https://www.fab.com/sellers/Kitsana%20Puengsri",
+	"DocsURL": "https://gist.github.com/KitsanaSj17/56d59eedbf0ceb6538515460e7a2a196",
+	"MarketplaceURL": "",
+	"SupportURL": "https://gist.github.com/KitsanaSj17/56d59eedbf0ceb6538515460e7a2a196",
+	"EngineVersion": "5.8.0",
+	"CanContainContent": false,
+	"Installed": true,
+	"Modules": [
+		{
+			"Name": "TextAnimator",
+			"Type": "Runtime",
+			"LoadingPhase": "Default",
+			"PlatformAllowList": [
+				"Win64"
+			]
+		},
+		{
+			"Name": "TextAnimatorEditor",
+			"Type": "Editor",
+			"LoadingPhase": "Default",
+			"PlatformAllowList": [
+				"Win64"
+			]
+		}
+	]
+}
