@@ -1,5 +1,13 @@
 # AI Memory
 
+## 2026-07-29 Sword owner self-damage exclusion
+
+- Updated `/Game/Blueprints/Weapons/BP_Sword.TrySwordDamage` so damage processing only continues when `OtherActor != GetOwner()`.
+- When the sword overlaps its owning player, the new owner-check branch ends without running the existing speed check or `ApplyDamage` interface call.
+- Enemy damage behavior is unchanged: non-owner actors still pass through the original sword-speed threshold and damage path.
+- `BP_Sword` compiled with warnings treated as errors and saved successfully.
+- L_Test PIE started and stopped successfully with no `Blueprint Runtime Error`, `Accessed None`, or `Broken Reference` logged. A physical sword-to-player overlap still requires VR/Quest confirmation.
+
 ## 2026-07-29 Boss animation overhaul: fixed "crawling" bug (wrong-skeleton anim), added entrance roar + hit-react, confirmed no BT/AIController needed
 
 - **Root cause of "보스가 기어다니는" complaint found and fixed**: `BP_Boss.EndRecovery` was calling `PlayAnimation(Mesh, /Game/Orc/Animations/axe_run.axe_run, looping=true)` — an **Orc-skeleton** run animation played on the Rampage-skeleton boss mesh. This fires every single time the boss finishes an attack's recovery window and resumes chasing (i.e. constantly during combat), producing a broken/incompatible retarget pose that reads as crawling. Almost certainly a copy-paste leftover from when BP_Boss was cloned from BP_Enemy (the Orc). Fixed by repointing that pin to `Run_Fwd` (Rampage's own run cycle), same asset `OnSenseBeginOverlap` already correctly uses when chase first begins.
