@@ -604,3 +604,17 @@ prompts/07_WaveSystem.md (BP_WaveManager) 구현 완료: Wave1 = BP_Goblin 3마�
 - Added `UpdateSkillCooldownProgress`, called by a 0.25-second looping timer. It advances each counter from 0 to 120 and maps that range to HUD percent 0 to 1, producing a 30-second bottom-to-top color reveal.
 - Existing exact 30-second reuse gates remain unchanged and independent.
 - `BP_XRPawn` and `WBP_PlayerHUD` compiled and saved. L_Test PIE reported no `Blueprint Runtime Error`, `Accessed None`, or `Broken Reference`; L_Test was not saved.
+
+# 2026-07-30 Victory / Defeat result UI
+
+- Added separated result UI PNG source assets under `Content/UI/GameResult/Source`: victory/defeat backgrounds, transparent ornamental panels, and transparent restart-button frames.
+- Imported six UI textures under `/Game/UI/GameResult` with UI compression, no mipmaps, sRGB, and Never Stream.
+- Created `/Game/UI/GameResult/WBP_GameResult` at 1280x720 with independent Victory and Defeat layers. Both layers start Collapsed.
+- Added `ShowVictory` and `ShowDefeat` functions that reveal only the requested result layer.
+- Added Victory/Defeat restart buttons labeled `처음으로`; both reopen `L_Test`.
+- Added a screen-space `GameResultWidget` component to `/Game/XRFramework/Blueprints/BP_XRPawn`.
+- Added `ShowVictoryResult` and `ShowDefeatResult` forwarding functions on `BP_XRPawn`.
+- `BP_WaveManager.OnAllWavesCleared` now calls `ShowVictoryResult` after broadcasting `OnVictory`.
+- Player death now calls `ShowDefeatResult` after broadcasting `OnGameOver`.
+- Extended the old automatic death-restart delay from 2 seconds to 3600 seconds so the Defeat screen remains until the restart button is pressed.
+- `WBP_GameResult`, `BP_XRPawn`, and `BP_WaveManager` compiled and saved. L_Test PIE started/stopped without a new Blueprint Runtime Error or Accessed None. Final visual scale and controller-ray interaction still require Quest/VR Preview confirmation.
