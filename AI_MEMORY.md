@@ -1,5 +1,17 @@
 # AI Memory
 
+## 2026-07-29 HUD flush frame and reversed gray-overlay cooldown
+
+- Resized both `button_frame` widgets from 92x92 to 80x80 and moved them to the exact same coordinates as their 80x80 cooldown icons. Raised each frame slot to ZOrder 4 so the border overlays the icon instead of leaving a visible gap around it.
+- Rebuilt the cooldown visual as a receding gray overlay to guarantee the requested direction:
+  - ProgressBar background is now the original full-color icon.
+  - ProgressBar fill image is the dark gray-tinted icon.
+  - Fill direction is `TopToBottom`.
+  - `WBP_PlayerHUD.SetMagicCharges` now maps each incoming cooldown progress from `0..1` to visual Percent `1..0`.
+- Result: immediately after using a skill the icon is fully gray; as cooldown progress increases, the gray overlay retreats upward and reveals the original color from bottom to top. At cooldown completion the full icon is original color.
+- Fill animation remains disabled, so the texture itself does not scroll.
+- `WBP_PlayerHUD` compiled and saved successfully. L_Test PIE reported no `Blueprint Runtime Error`, `Accessed None`, or `Broken Reference`.
+
 ## 2026-07-29 Orc (BP_Enemy) size/speed/attack-clarity tuning — confirmed same detect/chase/attack FSM as Boss/Goblin
 
 - Confirmed `BP_Enemy` (the Orc) already has the identical hand-built FSM as Boss/Goblin (`SenseRadius=1500`, `AttackRange=150`, full `ChaseTick`/`BeginAttack`/`DealAttackDamage` chain) — it does detect and attack the player, nothing was missing structurally.
