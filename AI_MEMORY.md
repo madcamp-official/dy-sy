@@ -1,5 +1,13 @@
 # AI Memory
 
+## 2026-07-29 Robust sword self-damage prevention
+
+- The earlier `OtherActor != GetOwner()` guard in `/Game/Blueprints/Weapons/BP_Sword.TrySwordDamage` was not sufficient because the ChildActor sword has no explicit runtime `SetOwner` setup and its live `Instigator` is `None`.
+- Added an explicit `CastToBP_XRPawn` at the start of `TrySwordDamage`.
+- If `OtherActor` is the player pawn, the successful cast execution path intentionally ends immediately, before owner comparison, speed threshold, or `ApplyDamage`.
+- Only `CastFailed` continues into the existing owner check and sword-speed damage path, so enemies and other valid non-player targets retain the original behavior.
+- `BP_Sword` compiled with warnings treated as errors and saved successfully. L_Test PIE reported no `Blueprint Runtime Error`, `Accessed None`, or `Broken Reference`.
+
 ## 2026-07-29 HUD flush frame and reversed gray-overlay cooldown
 
 - Resized both `button_frame` widgets from 92x92 to 80x80 and moved them to the exact same coordinates as their 80x80 cooldown icons. Raised each frame slot to ZOrder 4 so the border overlays the icon instead of leaving a visible gap around it.
