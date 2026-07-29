@@ -432,3 +432,38 @@ prompts/07_WaveSystem.md (BP_WaveManager) 구현 완료: Wave1 = BP_Goblin 3마�
 - The existing damage-block and melee-knockback checks remain visibility-based, so both stay active for the same four-second window.
 - `BP_XRPawn` compiled with warnings treated as errors and saved successfully.
 - L_Test PIE produced no Blueprint Runtime Error, Accessed None, or Broken Reference. Physical Y-button timing still requires Quest/VR Preview confirmation; L_Test was not saved.
+
+# 2026-07-29 Four-second defense collision and invulnerability
+
+- Added `bDefenseActive` to `/Game/XRFramework/Blueprints/BP_XRPawn` as the authoritative defense state.
+- Left-Y `Started` sets the state true, shows/resets the Aura, enables the barrier collision, and starts the existing retriggerable 4.0-second delay. At delay completion the collision is disabled, the state is set false, and the Aura is deactivated/hidden.
+- Replaced the unreliable `GetComponentByClass(ParticleSystemComponent) -> IsVisible` damage gate with a direct `bDefenseActive` check. While true, `ApplyDamage` exits without changing HP, HUD, death, or restart state.
+- Added `DefenseBarrierCollision`, a 140 cm radius sphere attached to `VROrigin` at Z=100 cm. It starts with `NoCollision`, affects no navigation, ignores non-Pawn channels, and blocks Pawn collision only while defense is active.
+- `BP_XRPawn` compiled with warnings treated as errors and saved successfully.
+- PIE started and stopped successfully. No new `Blueprint Runtime Error` or `Accessed None` appeared. The editor environment produced unrelated OpenXR runtime/time errors because no active headset session was available.
+- Physical enemy approach, Y-button timing, and collision feel still require a Quest/VR Preview check. L_Test was not saved.
+
+# 2026-07-29 HUD skill icons and independent cooldowns
+
+- Updated `/Game/UI/WBP_PlayerHUD` magic slots:
+  - Slot 1 now uses `/Game/Free_RPG_Icons_Pack/2D_ASSETS/T_Free_RPG_Icons_Pack_Buff_5` for the player Fireball.
+  - Slot 2 now uses `/Game/Free_RPG_Icons_Pack/2D_ASSETS/T_Free_RPG_Icons_Pack_Debuff_5` for the defense magic.
+  - The unused third magic frame, icon, and charge bar are Collapsed.
+- Added independent Fireball and defense readiness state to `/Game/XRFramework/Blueprints/BP_XRPawn`; both start ready.
+- Fireball use sets its HUD charge to empty, blocks additional Fireball casts, and restores availability after exactly 30 seconds.
+- Defense use sets its HUD charge to empty, blocks additional defense activations, keeps the existing shield active for 4 seconds, and restores availability 26 seconds after the shield ends (30 seconds total from activation).
+- Fireball and defense cooldowns do not block each other.
+- Added `RefreshSkillCooldownHUD` to push the two readiness displays into `WBP_PlayerHUD.SetMagicCharges`.
+- `BP_XRPawn` and `WBP_PlayerHUD` compiled with warnings treated as errors and saved successfully.
+- L_Test PIE started/stopped with no `Blueprint Runtime Error`, `Accessed None`, or `Broken Reference`. Physical controller timing still requires Quest/VR Preview validation; L_Test was not saved.
+
+# 2026-07-29 Icon-fill cooldown visualization
+
+- Reworked the first two HUD cooldown widgets so they no longer appear as separate thin charge bars.
+- Each cooldown widget now occupies the exact 60x60 icon area and renders the assigned skill texture twice: a dark gray background icon and a full-color fill icon.
+- The original standalone icon images are Hidden to avoid double rendering. The unused third slot remains Collapsed.
+- Both icon fills use `BottomToTop`, zero border padding, and smooth fill animation.
+- Added `FireballCooldownTicks` and `DefenseCooldownTicks`, initialized to 120. Each skill resets only its own counter to 0 when used.
+- Added `UpdateSkillCooldownProgress`, called by a 0.25-second looping timer. It advances each counter from 0 to 120 and maps that range to HUD percent 0 to 1, producing a 30-second bottom-to-top color reveal.
+- Existing exact 30-second reuse gates remain unchanged and independent.
+- `BP_XRPawn` and `WBP_PlayerHUD` compiled and saved. L_Test PIE reported no `Blueprint Runtime Error`, `Accessed None`, or `Broken Reference`; L_Test was not saved.
