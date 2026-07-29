@@ -412,3 +412,23 @@ prompts/07_WaveSystem.md (BP_WaveManager) 구현 완료: Wave1 = BP_Goblin 3마�
 - All four affected Blueprints compiled with warnings treated as errors and saved.
 - L_Test PIE with the runtime Aura forced visible kept player health at `100/100`; no Blueprint Runtime Error or Accessed None occurred. L_Test was not saved.
 - Physical button activation and knockback feel still require Quest/VR Preview validation.
+
+# 2026-07-29 Defense aura footprint and synchronized playback
+
+- Created the project-owned particle copy `/Game/Blueprints/Magic/P_DefenseAura` from the Marketplace source `/Game/FXVarietyPack/Particles/P_ky_healAura`; the Marketplace asset was not modified.
+- Updated `BP_XRPawn.DefenseAura` to use the project-owned copy.
+- Widened only the horizontal footprint from scale `(0.65, 0.65, 0.65)` to `(1.0, 1.0, 0.65)`, preserving the vertical size while expanding the area around the player.
+- Fixed the short/mid-playback appearance: `DefenseAura` no longer auto-activates invisibly at BeginPlay. Left-defense `Started` now shows the component and calls `Activate(bReset=true)`, so the shield and green magic circle restart on the same timeline. `Completed` calls `Deactivate` before hiding it.
+- `BP_XRPawn` compiled with warnings treated as errors; `BP_XRPawn` and `P_DefenseAura` saved successfully.
+- L_Test PIE confirmed the runtime component uses `P_DefenseAura`, scale `(1.0, 1.0, 0.65)`, hidden by default, and `bAutoActivate=false`. No Blueprint Runtime Error, Accessed None, or Broken Reference was logged. L_Test was not saved.
+- Physical left-Y timing and final footprint still require Quest/VR Preview visual confirmation.
+
+# 2026-07-29 Four-second tap defense
+
+- Converted left-Y defense from hold-to-maintain to tap-to-activate in `/Game/XRFramework/Blueprints/BP_XRPawn`.
+- `IA_Menu_Toggle_Left.Started` now shows and resets/activates `DefenseAura`, then runs a `Retriggerable Delay` of exactly `4.0` seconds before deactivating and hiding the Aura.
+- `Completed` no longer ends defense when the button is released.
+- Pressing Y again during the active window restarts the delay, providing a fresh four seconds.
+- The existing damage-block and melee-knockback checks remain visibility-based, so both stay active for the same four-second window.
+- `BP_XRPawn` compiled with warnings treated as errors and saved successfully.
+- L_Test PIE produced no Blueprint Runtime Error, Accessed None, or Broken Reference. Physical Y-button timing still requires Quest/VR Preview confirmation; L_Test was not saved.
