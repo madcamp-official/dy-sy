@@ -16,6 +16,21 @@
 - **Lesson for future scale-up requests on any Character-based enemy**: never scale `CollisionCylinder`/capsule alone for "make it bigger" — that changes the nav agent footprint too. Scale the mesh component instead (or scale both capsule and mesh but keep the capsule's effective radius under ~40-50 given this project's NavMesh is built for AgentRadius 35) and set `NavAgentProps` explicitly rather than relying on -1 auto-derive once a capsule is scaled non-trivially.
 - **Not yet re-verified in PIE** (same tooling constraint as before — boss is wave-spawned, not level-placed). If the boss still doesn't chase/attack properly after this, the next things to check: (1) whether `L_Arena`'s NavMesh is actually built/up-to-date (stale nav data), (2) whether `BP_WaveManager`'s `SpawnActorFromClass` spawn point is even inside the `NavMeshBoundsVolume`'s bounds, (3) whether the AIController is actually possessing the spawned boss (`GetController()` validity) — ruled out `SpawnActorFromClass` itself as a cause (it's the standard node, doesn't bypass `AutoPossessAI`).
 - **Goblin tuning**: `CharMoveComp.MaxWalkSpeed` 150→110 (user: "too fast"), `bOrientRotationToMovement` false→**true** (the goblin was never actually turning to face its movement direction while wandering/chasing — likely the real source of "unnatural" movement, not just speed; matches how Boss already had this set to true). `WanderRadius` 900→1300 (user: widen further, "more natural" motion — wander logic itself, `IdlePatrolStep`/`WanderPause`, was already reasonable: pick random NavMesh-reachable point, walk 3-6s or until `WanderPause` cuts it off, idle-pause 1.5-3.5s, repeat).
+## 2026-07-29 HUD icon fit and static cooldown fill
+
+- Enlarged `MagicSlot1ChargeBar` and `MagicSlot2ChargeBar` in `/Game/UI/WBP_PlayerHUD` from 60x60 to 80x80 and re-centered them with a 6 px inset inside each 92x92 `button_frame`.
+- Updated both ProgressBar background/fill brush image sizes to 80x80 so the skill artwork fills the frame interior instead of appearing as a small square with wide empty margins.
+- Disabled `WidgetStyle.EnableFillAnimation` on both cooldown ProgressBars. This removes the internal vertical scrolling/panning effect while preserving the static `BottomToTop` cooldown reveal driven by Percent.
+- `WBP_PlayerHUD` compiled successfully. The updated widget asset is present on disk, and the running PIE session had no `Blueprint Runtime Error`, `Accessed None`, or `Broken Reference`.
+
+## 2026-07-29 HUD button frame and cooldown icon execution fix
+
+- Replaced `MagicSlot1Frame` and `MagicSlot2Frame` in `/Game/UI/WBP_PlayerHUD` from `lil_roundframe_ready2` to the existing project asset `/Game/GuiParts/UiElements/button_frame`.
+- Found the actual reason the cooldown icons never changed: `WBP_PlayerHUD.SetMagicCharges` had all of its data pins connected, but the function entry and every setter/`SetPercent` node had no execution wiring. Calls to the function therefore performed no work even though the pawn-side 0.25-second timer and percentage calculations were correctly connected.
+- Wired the full execution chain: function entry -> store slot 1 charge -> slot 1 `SetPercent` -> store slot 2 charge -> slot 2 `SetPercent` -> store slot 3 charge -> slot 3 `SetPercent`.
+- The first two progress bars retain their dark background icon, full-color fill icon, and `BottomToTop` fill direction. Using a skill now resets its displayed percent to 0 and the 30-second timer progressively restores color from bottom to top.
+- `WBP_PlayerHUD` compiled and saved successfully; `BP_XRPawn` also compiled with warnings treated as errors.
+- L_Test PIE started and stopped with no `Blueprint Runtime Error`, `Accessed None`, or `Broken Reference`. Physical skill activation and final appearance still require VR/Quest visual confirmation.
 
 ## 2026-07-29 Sword owner self-damage exclusion
 
