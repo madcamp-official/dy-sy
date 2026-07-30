@@ -780,3 +780,12 @@ prompts/07_WaveSystem.md (BP_WaveManager) 구현 완료: Wave1 = BP_Goblin 3마�
   - `/Game/UI/GameResult/T_RestartText`
 - Configured all three for UI use: `TEXTUREGROUP_UI`, `TC_EditorIcon` (UI RGBA), no mipmaps, clamp X/Y, alpha preserved, sRGB enabled, never stream.
 - No Blueprint or widget hierarchy was modified in this task, so no Blueprint compile was required. The existing TextBlock widgets have not yet been replaced with Image widgets.
+
+# 2026-07-30 Cinzel font removal
+
+- User explicitly requested deletion of the added font.
+- Audited `/Game/Cinzel`: six saved composite font assets reported no external referencers.
+- Unreal MCP asset deletion returned `false` for the loaded font/composite-font packages, so it could not perform a clean in-editor delete.
+- Removed the complete physical `Content/Cinzel` folder after validating the exact absolute target. This deleted the imported `.uasset` files, `.ttf` sources, README, and OFL license copy from Content.
+- The older repository-root `Cinzel/` source files were already marked deleted in the worktree and remain deleted.
+- No Blueprint was changed. Unreal Editor may retain stale Asset Registry entries for the loaded font packages until the editor or project is restarted.
