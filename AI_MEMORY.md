@@ -739,3 +739,11 @@ prompts/07_WaveSystem.md (BP_WaveManager) 구현 완료: Wave1 = BP_Goblin 3마�
 - **마법 포션(파이어볼/방어 쿨다운 회복) 획득음**: `BP_XRPawn.EventGraph`에서 쿨다운 종료 시 `bFireballReady=true`/`bDefenseReady=true`를 세팅하는 두 지점 직후에 각각 `Cue_Ashorttactilesou1`을 `PlaySound2D`로 재생(요청하신 "총 2번" = 파이어볼 쿨다운 회복 1회 + 방어막 쿨다운 회복 1회).
 - 수정한 5개 블루프린트(`BP_Boss`, `BP_Sword`, `BP_XRPawn`, `BP_WaveManager`, `BP_BossFireball`) 전부 컴파일 클린, 저장 완료. `L_Test` 재로드 후 PIE로 로그 확인 — 새 런타임 에러 없음. 다만 오크 3인 스폰은 웨이브 매니저의 웨이브 진행 조건(이전 웨이브 클리어) 뒤에 걸려 있어서 PIE 시작 직후 5초 안에는 등장하지 않았음 — 실제 웨이브를 진행시켜야 스폰/색상까지 육안 확인 가능, 사용자 플레이 테스트 필요.
 - Ran `/Game/Maps/L_Test` in PIE and found no `Blueprint Runtime Error`, `Accessed None`, or `Broken Reference`; stopped PIE and restored `/Game/Maps/L_Dungeon` as the loaded editor level.
+
+# 2026-07-30 플레이어 발자국 소리 추가
+
+- `BP_XRPawn.ApplySmoothLocomotion`(조이스틱 스무스 이동 함수, 매 프레임 가까이 호출됨)에 거리 누적 기반 발자국 시스템 추가.
+- 신규 변수 `FootstepDistanceAccum`(float): 매 호출마다 그 프레임의 이동 벡터 길이(`VectorLength(DeltaLocation)`)를 누적하다가, 200(cm)을 넘으면 발자국 사운드를 재생하고 누적값에서 200을 빼서 이월(carry-over) — 실제 보폭 간격과 비슷하게 이동 거리 기준으로 트리거되며, 프레임레이트나 이동 속도와 무관하게 일정한 간격으로 재생됨.
+- 사운드는 `/Game/Footsteps_Volume_02/Cues/Footstep_Boots_0{1,3,5,7}_Cue` 4종 중 `RandomIntegerInRange(0,3)`으로 랜덤 선택(중첩 Branch로 분기, `PlaySoundAtLocation`을 플레이어 위치에서 재생) — 매번 똑같은 소리가 반복되지 않도록 변주.
+  - 툴링 메모: `K2Node_Select`(선택 노드)의 옵션 핀은 와일드카드 상태에서 `set_pin_value`로 리터럴 애셋 경로를 바로 넣을 수 없었음(에러 발생) — 와일드카드는 실제 와이어 연결로만 타입이 확정되는 것으로 보임. 그래서 Select 대신 `Equal(Int)`+`Branch` 체인(각 브랜치가 이미 타입이 확정된 `PlaySoundAtLocation.Sound` 핀에 직접 리터럴 값을 넣는 방식)으로 우회.
+- `BP_XRPawn` 컴파일 클린, 저장 완료. `L_Test` PIE 로그 확인 — 새 런타임 에러 없음. 다만 자동화 도구로 실제 이동시켜 발소리가 들리는지 육안/청각 확인은 못 했음 — 사용자 플레이 테스트 필요.
