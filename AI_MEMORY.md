@@ -1,5 +1,32 @@
 # AI Memory
 
+## 2026-07-31 L_Dungeon enemy placement and zone-limited navigation
+
+- Modified `/Game/Maps/L_Dungeon` without changing visible dungeon geometry.
+- Added five initially placed Goblins to the first-floor corridor:
+  - three staggered through the corridor middle;
+  - two immediately before the green potion at `(3149, -1329, -403)`.
+- Added `/Game/Blueprints/Systems/BP_PotionGoblinTrigger` at the green potion. It uses a Box overlap, casts the overlapping actor to `BP_XRPawn`, spawns exactly one `BP_Goblin` at the stair entrance around `(1900, -1150, -410)`, and destroys itself so it cannot spawn twice.
+- Added three initially placed Orcs across the first large upper-floor room and one initially placed Boss at the far-center of the final room (`-3000, 200`).
+- `L_Dungeon` contains no `BP_WaveManager` instance or kill-chain spawn dependency; the five corridor Goblins, three Orcs, and Boss are level actors present from map start. The legacy WaveManager asset remains used only by `L_Test` and was not modified because this task was scoped to the dungeon map.
+- Added four disjoint `NavMeshBoundsVolume` regions:
+  - first-floor Goblin corridor;
+  - a small isolated stair-entrance region for the potion-spawned Goblin;
+  - upper-floor Orc room;
+  - final Boss room.
+  These generate separate navigation islands so enemies cannot path between zones while leaving their combat and AI Blueprints unchanged.
+- The decorative second-floor mesh floors had collision profiles enabled but no usable character-support collision; Simulate PIE showed Orcs and Boss falling. Added two invisible, thin `BlockingVolume` support floors exactly matching the Orc and Boss navigation regions. No visible mesh or room layout changed.
+- `BP_PotionGoblinTrigger` compiled with warnings treated as errors and saved. `L_Dungeon` was saved.
+- `L_Dungeon` PIE verification:
+  - five initial Goblins remained in the corridor;
+  - three Orcs remained on the upper floor;
+  - Boss remained at the final-room far-center;
+  - `RecastNavMesh-Default` generated;
+  - entering the potion trigger with `BP_XRPawn` produced a sixth Goblin at the stair entrance and removed the one-shot trigger;
+  - no `Blueprint Runtime Error`, `Accessed None`, or `Broken Reference` occurred.
+- Ran `/Game/Maps/L_Test` in Simulate PIE after compilation; no new runtime/compile error was produced. The log still contains the earlier, now-resolved intermediate compile error from before the trigger's SpawnTransform was connected.
+- Restored `/Game/Maps/L_Dungeon` as the loaded editor level.
+
 ## 2026-07-30 Independent Orc idle patrol and attack-animation change
 
 - Updated only `/Game/Blueprints/Enemies/BP_Enemy`; the three WaveManager Orc spawns still use the same class and their existing mesh/color assignment, combat values, sensing, damage, hit reaction, death, and wave logic remain unchanged.
