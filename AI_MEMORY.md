@@ -1014,3 +1014,28 @@ prompts/07_WaveSystem.md (BP_WaveManager) 구현 완료: Wave1 = BP_Goblin 3마�
 - `/Game/XRFramework/Input/IMC_Default`의 기본 매핑에 `IA_Move → OculusTouch_Left_Thumbstick_2D`가 존재하고, `IA_Move`는 `Axis2D`로 설정되어 있음을 확인.
 - PIE 로그에 새로운 Blueprint, Enhanced Input 또는 Collision 오류 없음.
 - MCP는 물리 Quest 컨트롤러 축 입력을 발생시킬 수 없으므로 실제 스틱으로 이동하는 최종 확인은 헤드셋 플레이 테스트가 필요.
+
+# 2026-07-31 왼손 조이스틱 이동 불능 수정
+
+- `IMC_Default`의 `OculusTouch_Left_Thumbstick_2D → IA_Move` 매핑과 `IA_Move(Axis2D)` 설정은 정상임을 재확인.
+- `BP_XRPawn.EventGraph`에서 `IA_Move.Triggered → IsDead Branch(false) → ApplySmoothLocomotion` 실행 연결도 정상.
+- 근본 원인은 `ApplySmoothLocomotion`의 이동 거리 계산에 있던 와일드카드 `PromotableOperator` 타입 오염:
+  - `GetWorldDeltaSeconds(float) × 300(float)` 노드가 `vector*vector`로 잘못 고착되고 출력도 Vector가 됨.
+  - 이어지는 방향 벡터 곱셈도 `vector*vector`로 오염되어 최종 `DeltaLocation`이 `(0,0,0)`이 됨.
+- 오염된 두 곱셈 노드를 제거하고 구체 타입 함수로 교체:
+  - `SafeDivide(DeltaSeconds, 0.003333333333)`로 프레임당 300cm/s 이동 거리(float) 계산.
+  - `ClampVectorSize(Direction, Min=Distance, Max=Distance)`로 명확한 Vector 이동량 생성.
+- 새 이동 벡터를 일반 이동, 벽 전방 트레이스, 45cm 위쪽 우회 트레이스, 발자국 거리 계산 경로에 모두 다시 연결.
+- 기존 벽 차단과 계단 상승 분기, 발자국 로직은 유지.
+- `BP_XRPawn`을 warnings-as-errors로 컴파일하고 저장. `L_Dungeon` PIE에서 새 Blueprint Runtime Error, Accessed None 또는 Enhanced Input 오류 없음.
+- MCP에서는 실제 Quest 컨트롤러 축을 발생시킬 수 없어 물리 조이스틱 최종 확인은 기기 플레이 테스트 필요.
+
+# 2026-07-31 시선 의존 이동 및 문 통과 높이 수정
+
+- 사용자 증상: 바닥을 봐야만 왼손 스틱 이동이 되고, 플레이어가 높아서 시작 문을 통과하지 못함.
+- 런타임 수치 조사 결과 `PlayerBodyCollision`이 `RelativeLocation.Z=-90`, `CapsuleHalfHeight=90`이라 캡슐 하단이 던전 바닥 아래로 약 80cm 파묻혀 있었음.
+- 이 상태에서 `ApplySmoothLocomotion`의 전방 Capsule Trace가 바닥을 벽으로 계속 감지해 일반 이동을 차단하고, 시선 피치에 따라 우연히 다른 충돌 분기로 들어가는 문제가 발생.
+- `PlayerBodyCollision.RelativeLocation.Z`를 `-90 → -10`으로 변경해 현재 시작 높이 기준 캡슐이 바닥부터 위로 서도록 정렬. 런타임에서 `RelativeLocation=(0,0,-10)`, 반높이 90, 반지름 40 확인.
+- 이동 기준 회전도 `PlayerCameraManager.GetCameraRotation` 전체를 직접 쓰는 대신 `BreakRotator → Yaw만 MakeRotator(Roll=Pitch=0)`를 거쳐 Forward/Right Vector를 계산하도록 변경. 이제 위/아래 시선 피치와 무관하게 수평 이동.
+- 기존 벽 충돌 Capsule Trace, 45cm 위쪽 계단 우회 검사, 이동 속도와 발자국 로직은 유지.
+- `BP_XRPawn` warnings-as-errors 컴파일 및 저장 완료. `L_Dungeon` PIE에서 새 Blueprint Runtime Error, Accessed None, Enhanced Input 또는 Collision 오류 없음.
