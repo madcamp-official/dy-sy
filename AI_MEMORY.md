@@ -1,5 +1,14 @@
 # AI Memory
 
+## 2026-07-31 Tutorial mapping context was killing both thumbsticks
+
+- User reported that after the tutorial change neither the left nor the right joystick worked.
+- Cause was mine: `ShowTutorial` added `/Game/XRFramework/Input/IMC_Menu` at **priority 1**, above `IMC_Default`'s priority 0. `IMC_Menu` maps both thumbsticks to `IA_Menu_Cursor_Left` / `IA_Menu_Cursor_Right`, and both of those actions have `bConsumeInput = true`, so they swallowed `IA_Move` (left stick) and `IA_Turn` (right stick, `OculusTouch_Right_Thumbstick_X`, still mapped in `IMC_Default` despite the earlier note about removing it). Movement stayed dead for as long as the tutorial context was active — permanently if the panel could not be dismissed.
+- Fix: `ShowTutorial` now adds `IMC_Menu` at **priority -1**. `IMC_Default` (priority 0) therefore wins both thumbsticks, while the trigger keys stay with `IMC_Menu` because `IMC_Default` maps no trigger at all.
+- Verified this is safe against `IMC_Hands` (also priority 0), which maps the same `*_Trigger_Axis` keys: `IA_Hand_IndexCurl_Left/Right` have `bConsumeInput = false`, so they do not block `IA_Menu_Interact_*_Pressed` at a lower priority.
+- Side effect, deliberately accepted for now: the player can walk during the tutorial, so the panel no longer physically gates the starting hall. Do not re-add the gate through input consumption. If the gate is wanted, branch on `bTutorialActive` inside `BP_XRPawn.ApplySmoothLocomotion` instead, and only after the `시작하기` button is confirmed pressable on the headset — otherwise a player who cannot press it is locked in place.
+- `Mappings` on an `InputMappingContext` cannot be read or written through the MCP `ObjectTools` (it always returns `[]`), so building a trimmed tutorial-only context was not possible; priority ordering was the available lever.
+
 ## 2026-07-31 Clickable world-space tutorial gate before the starting hall
 
 - Diagnosed why the startup instruction window could never be dismissed: `BP_XRPawn.GameResultWidget` is a **Screen**-space `WidgetComponent`, so the hijacked `시작하기` button could not be hit by `WidgetInteractionLeft/Right` (world trace on `ECC_GameTraceChannel1` / `3DWidget`). The project also had no `PressPointerKey` plumbing anywhere outside `BP_Menu`.
