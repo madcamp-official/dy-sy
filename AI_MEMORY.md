@@ -800,3 +800,15 @@ prompts/07_WaveSystem.md (BP_WaveManager) 구현 완료: Wave1 = BP_Goblin 3마�
   - 검증: `SkeletalMeshTools.get_bounds`로 두 메시의 레퍼런스 포즈 바운딩 박스를 직접 수치로 비교해서 확인(오크 박스 익스텐트 Z≈103.27 vs 고블린 Z≈81.02, 반면 캡슐 기본 하프하이트는 둘 다 88로 동일했었다는 게 결정적 단서). 실제 VR 플레이로 "검이 이제 오크한테 잘 맞는지"까지는 자동화 도구로 검증 불가 — 사용자 플레이 테스트 필요.
 - **발자국 소리 간격 단축**: `BP_XRPawn.ApplySmoothLocomotion`의 누적 거리 임계값 2곳(`K2Node_PromotableOperator_9`/`_10`의 B핀, 기존 200.0)을 `100.0`으로 축소 — 발자국이 기존 대비 2배 더 자주 재생됨.
 - `BP_Enemy`, `BP_XRPawn` 컴파일 클린, 저장 완료. `L_Test` 재로드 후 PIE 로그 확인 — 새 런타임 에러 없음(기존부터 있던 `LogCrowdFollowing: RecastNavMesh 없음` 경고는 무관, 오크 관련 에러 없음). 웨이브 매니저의 오크 스폰이 이전 웨이브 클리어 후에 걸려 있어서 PIE 시작 직후에는 오크가 등장하지 않아 실제 스폰 상태 육안 확인은 못 함.
+
+# 2026-07-30 보스 전투 상황별 보이스 사운드 4종 추가
+
+- `Rampage_Effort_Cheer`(보스가 플레이어에게 데미지를 입힐 때): 실제로 플레이어에게 데미지가 들어가는 3개 함수 각각에서 `ApplyDamage(Message_0).then` 직후로 스플라이스해서 `PlaySound2D` 추가.
+  - `BP_Boss.DealAttackDamage`: `Message_0.then → PlaySound2D(Cheer) → CastToCharacter(기존 넉백 체인)`.
+  - `BP_Boss.DealSlamDamage`: `Message_0.then → PlaySound2D(Cheer) → SetState(Recovery)`.
+  - `BP_Boss.DealFireballDamage`: `Message_0.then`이 원래 미연결(dead end)이라 스플라이스 없이 바로 연결.
+- `Rampage_Effort_Death`(보스가 데미지를 입었을 때): `BP_Boss.HandleDamage`의 피격(생존) 분기 — `PlayAnimation(HitReact_Front) → LaunchCharacter(넉백)` 다음, `SetTimer(EndHit)` 이전에 `PlaySoundAtLocation`으로 스플라이스. Location은 이미 넉백 계산에 쓰이던 `GetActorLocation(SelfPawn)` 결과를 데이터 핀 팬아웃으로 재사용(죽음 분기가 아니라 "데미지를 입었을 때" 매번 재생되는 지점이라 이름은 Death지만 실제로는 피격 사운드로 사용).
+- `Rampage_Effort_Ability_Ultimate_Shrink`(보스가 파이어볼 던질 때): `BP_Boss.CastFireball`에서 기존 `Cue_ExplosiveBarrelC15`(폭발 사운드) `PlaySoundAtLocation.then`이 미연결 상태였던 걸 이어서 새 `PlaySoundAtLocation` 추가 — 두 사운드가 순서대로 함께 재생됨. Location은 보스 자기 위치(`GetActorLocation`, 기존 3곳에서 이미 재사용 중이던 값)를 팬아웃으로 재사용.
+- `Rampage_Effort_Ability_Ultimate_Grow`(그냥 중간중간 한 번씩): `BP_Boss.IdleFlourish`는 원래 `State=="Idle"`일 때 6~12초 랜덤 간격으로 재귀 타이머를 걸며 랜덤 유휴 애니메이션을 재생하는 함수라, 이 "가끔 한 번씩" 트리거에 정확히 들어맞음 — `PlayAnimation.then → PlaySound2D(Grow) → SetTimer(재귀 재예약)`으로 스플라이스.
+- 6곳 모두 스플라이스 후 `get_node_infos`로 재조회해서 exec 체인이 의도대로 끊기지 않고 이어졌는지 전부 확인(fan-out 덮어쓰기 버그 방지용 검증).
+- `BP_Boss` 컴파일 클린, 저장 완료. `L_Test` 재로드 후 PIE 로그에 `Accessed None`/`Blueprint Runtime Error`/`Broken Reference` 없음. 실제 전투 중 사운드 타이밍이 어울리는지는 사용자 플레이 테스트 필요.
