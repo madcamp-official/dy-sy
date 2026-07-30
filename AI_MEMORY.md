@@ -12,6 +12,67 @@
 - No Blueprint graph was modified, so Blueprint compile was not applicable.
 - Ran `/Game/Maps/L_Test` in PIE and found no `Blueprint Runtime Error`, `Accessed None`, `Broken Reference`, or `Compile Error`; restored `/Game/Maps/L_Dungeon` afterward.
 
+## 2026-07-30 VR Preview severe latency / GPU-timeout fix
+
+- Diagnosed the current Unreal/OpenXR session before changing settings.
+- PC VR Preview was rendering at `4128x2272` on an RTX 4050 Laptop GPU while Lumen GI, ray tracing, Virtual Shadow Maps, Substrate, mesh distance fields, and ray-tracing proxies were enabled together.
+- The editor log confirmed a 5-second D3D12 GPU timeout during VR Preview. The stalled frame's breadcrumbs included `RayTracingGeometry` and GPU skin-cache work, making the rendering path the primary cause.
+- Updated `Config/DefaultEngine.ini` for the existing Quest-oriented forward-rendering path: disabled dynamic GI/reflections, ray tracing and proxies, Virtual Shadow Maps, mesh distance fields, and Substrate.
+- Kept Forward Shading, Mobile HDR off, Instanced Stereo, and Mobile Multi-View enabled.
+- No Blueprint was modified, so Blueprint compile was not applicable.
+- A full Unreal Editor restart is required before validating VR Preview. If motion-to-photon delay remains after stable frame rate is restored, diagnose Quest Link/Air Link transport separately.
+
+## 2026-07-30 VR Preview latency follow-up after renderer restart
+
+- Confirmed from the new editor log that the renderer change took effect: `Ray tracing is disabled` and profiler metadata reports `raytracing="0"`.
+- The earlier 5-second GPU timeout did not recur in the new VR Preview session.
+- VR Preview still allocated a large `4128x2272` stereo buffer.
+- D3D12 logged several PSO creation waits of 100-200 ms. These explain intermittent hitches during first-time shader/material use, but not a steady motion-to-photon delay.
+- Build/executable size itself does not create continuous head/controller tracking latency. It can affect installation, startup, loading, storage pressure, and runtime streaming only when assets are loaded.
+- If tracking is continuously delayed even while the PC preview window appears smooth, the next primary suspect is Quest Link/Air Link transport. If both the PC preview and headset stutter, reduce PC VR render resolution/pixel density and profile frame timing.
+
+## 2026-07-30 VR view appears as a head-following rectangular window - diagnosis only
+
+- User reported that the scene was not naturally immersive around 360 degrees; instead it looked like a laptop-sized window in front, with the visible window shifting as they turned their head.
+- No settings were changed in this diagnostic task.
+- Latest log proves Unreal did start an OpenXR VR Preview rather than ordinary desktop PIE:
+  - `XR: Instanced Stereo Rendering is Enabled`
+  - OpenXR initialized on Oculus runtime `1.205.0`
+  - VR render buffer resized to `4128x2272`
+  - preview window identified as `PC D3D SM6 OpenXR Oculus`
+- Therefore this is not caused by package/executable size or by a normal camera lacking a 360-degree projection.
+- Most likely categories:
+  1. The user is still viewing the Quest Link desktop panel rather than the active Unreal immersive application.
+  2. The Oculus compositor is repeatedly presenting/reprojecting a stale Unreal frame because frames are not arriving reliably; this can look like a rectangular image that follows head direction or exposes borders.
+- The log does not show OpenXR initialization failure. A headset-side observation is required to distinguish the Quest desktop-panel UI (visible panel border/controller UI) from stale-frame compositor behavior (game image itself freezes/warps and reveals dark borders).
+
+## 2026-07-30 Minimal VR Preview resolution reduction
+
+- User confirmed the second diagnosis case: the game image itself updates as delayed rectangular fragments when turning their head, consistent with stale-frame compositor reprojection caused by severely late frame delivery.
+- Applied only one rendering change: added `vr.PixelDensity=0.7` under `[/Script/Engine.RendererSettings]` in `Config/DefaultEngine.ini`.
+- Kept OpenXR, D3D12, Instanced Stereo, Forward Shading, and all gameplay/Blueprint logic unchanged.
+- No Blueprint was modified, so compile was not applicable.
+- Requires a full Unreal Editor restart. The next VR Preview log should show a render buffer materially smaller than the prior `4128x2272`; headset behavior must be tested after restart.
+
+## 2026-07-30 Ray tracing / foveation configuration audit
+
+- Rechecked the external claim that ray tracing was enabled and foveation was disabled.
+- Ray tracing is already fully disabled in the current project: `r.RayTracing=False`, ray-tracing proxies are disabled, and the latest runtime log explicitly says `Ray tracing is disabled` with profiler metadata `raytracing=0`.
+- `PointLight.RayTracing=True` and similar entries in `Saved/Config/WindowsEditor/EditorPerProjectUserSettings.ini` are editor visibility/show-flag preferences, not an override that re-enables the renderer while `r.RayTracing=0`.
+- No `bEnableRayTracing` or `foveationLevel` setting exists in the project configuration.
+- Foveated rendering is not active. The current Oculus OpenXR PC runtime reports `XR_FB_foveation`, `XR_FB_foveation_configuration`, and the Vulkan foveation extension as unavailable.
+- The project uses Epic's OpenXR plugin and does not have a Meta XR plugin entry. Enabling a new plugin was not attempted because project rules prohibit adding plugins arbitrarily.
+- The recently added `vr.PixelDensity=0.7` is a uniform resolution reduction, not foveated rendering. At early config load it was reported as a deferred/dummy CVar; runtime render-buffer dimensions after a new VR Preview are still needed to prove that the late-registered OpenXR CVar consumed the value.
+
+## 2026-07-30 Right-stick turn vs physical head-turn diagnosis
+
+- Diagnosis only; no input mapping or Blueprint was changed.
+- Unreal MCP was unavailable during the check, so conclusions use the latest saved project memory/config evidence rather than a fresh live graph read.
+- The latest documented state restored right-controller `IA_Turn` X-axis mappings in `/Game/XRFramework/Input/IMC_Default`.
+- `BP_XRPawn` uses the existing `IA_Turn -> SnapTurn` path. It is snap turn, not interpolated smooth turn, and it does not directly rotate the Camera or override HMD tracking. Physical HMD head tracking is intended to remain independent.
+- However, project-wide `DefaultInput.ini` configures Oculus Touch right-thumbstick X/Y with `DeadZone=0.0`. This leaves hardware drift unfiltered at the legacy axis-config layer. Whether the Enhanced Input action/mapping itself supplies its own dead-zone or threshold could not be freshly verified without MCP.
+- Conclusion: snap-turn logic is not a plausible cause of constant renderer/compositor delay, but an overly sensitive/no-dead-zone right stick can cause unintended rig snap rotations and make physical turning feel discontinuous. This can explain why removing the turn mapping previously felt more natural, separately from the rectangular stale-frame reprojection issue.
+
 ## 2026-07-29 Boss still faced left after bCanStrafe fix — real cause was a missing mesh yaw offset (correction to the entry below)
 
 User playtested the previous round's fixes: boss STILL always faced left while running (bCanStrafe=false alone did not fix it), Orc telegraph was better but wanted more range.
