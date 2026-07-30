@@ -1,5 +1,35 @@
 # AI Memory
 
+## 2026-07-30 Independent Orc idle patrol and attack-animation change
+
+- Updated only `/Game/Blueprints/Enemies/BP_Enemy`; the three WaveManager Orc spawns still use the same class and their existing mesh/color assignment, combat values, sensing, damage, hit reaction, death, and wave logic remain unchanged.
+- Implemented the previously empty `IdlePatrolStep` and `RefreshIdleAnimation` functions so every spawned Orc runs its own timer-driven idle patrol:
+  - BeginPlay still starts with looping `/Game/Orc/Animations/axe_IDLE1_1`.
+  - Each instance starts its first patrol after an independent random `0.5-3.0s` delay.
+  - While no player target is valid, it chooses its own reachable NavMesh point within `350cm` of its recorded spawn origin, moves there with `SimpleMoveToLocation`, and loops `/Game/Orc/Animations/axe_walk1`.
+  - After a random `2.5-5.0s` movement window it stops, returns to looping `axe_IDLE1_1`, waits a random `1.5-4.0s`, then chooses another point.
+  - Added `WanderOrigin` and `WanderRadius` (`350`) so patrol does not drift progressively away from each Orc's spawn area.
+  - Both patrol functions stop changing movement/animation when `bIsDead` is true. While a combat `TargetActor` is valid, they only retry later and do not override the existing chase/attack animation logic.
+- Changed the attack animation in `BeginAttack` from `/Game/Orc/Animations/axe_crit1` to `/Game/Orc/Animations/axe_hit1`, non-looping. Attack timing and damage remain `AttackWindupSeconds=1.0`, `HitDelaySeconds=0.5`, `RecoverySeconds=1.0`.
+- Verified the BeginPlay splice preserves the original downstream `bUseControllerRotationYaw` and all later initialization; verified the patrol execution chains and animation/timer pins after editing.
+- `BP_Enemy` compiled with warnings treated as errors and saved successfully.
+- Ran `/Game/Maps/L_Test` in PIE and found no `Blueprint Runtime Error`, `Accessed None`, `Broken Reference`, or `Compile Error`; restored `/Game/Maps/L_Dungeon`.
+- The three Orcs spawn only after the prior wave is cleared, so their simultaneous visual separation still requires playing through to the Orc wave in VR.
+
+## 2026-07-30 Sword reach extension and enemy hit knockback reinforcement
+
+- Extended `/Game/Blueprints/Weapons/BP_Sword.SwordCollision` farther toward the blade tip while preserving the handle-side boundary: `BoxExtent.Z 85 -> 100` and `RelativeLocation.Z 35.8 -> 50.8`. The collision box is now 200 cm long, adding approximately 30 cm of tip-side reach.
+- Rechecked the live `HandleDamage` graphs for `/Game/Blueprints/Enemies/BP_Enemy`, `BP_Goblin`, and `BP_Boss`.
+- Reinforced surviving-hit knockback so it is visually noticeable:
+  - Orc (`BP_Enemy`): attacker-to-enemy launch magnitude `350 -> 650`.
+  - Goblin (`BP_Goblin`): backward XY launch `180 -> 600`; vertical launch `180 -> 120` so the reaction reads more as retreat than a hop.
+  - Boss (`BP_Boss`): attacker-to-boss launch magnitude `450 -> 550`.
+- Explicitly connected Self to the `LaunchCharacter` target on `BP_Enemy` and `BP_Boss`; those target pins were previously left implicit/unconnected. `BP_Goblin` already had an explicit Character target.
+- Re-read the affected nodes after editing and confirmed the damage reaction execution chains still continue through `LaunchCharacter` into the existing `EndHit` timer; no prior exec connection was replaced.
+- Compiled `BP_Sword`, `BP_Enemy`, `BP_Goblin`, and `BP_Boss` with warnings treated as errors and saved all four assets.
+- Ran `/Game/Maps/L_Test` in PIE and found no `Blueprint Runtime Error`, `Accessed None`, `Broken Reference`, or `Compile Error`; restored `/Game/Maps/L_Dungeon` afterward.
+- Actual sword contact and knockback feel still require a VR playtest because the connected MCP cannot swing the motion controller or inject a live damage-interface call.
+
 ## 2026-07-30 Right-stick turn removal and L_Dungeon directional-light optimization
 
 - Removed all four `IA_Turn` mappings from `/Game/XRFramework/Input/IMC_Default`: Valve Index right thumbstick X, Oculus Touch right thumbstick X, Vive right trackpad X, and PICO right thumbstick X. Left-stick movement and all other mappings remain unchanged.
