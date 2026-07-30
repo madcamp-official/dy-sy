@@ -1,5 +1,41 @@
 # AI Memory
 
+## 2026-07-31 L_Dungeon Quest performance first-pass optimization
+
+- Diagnosed `/Game/Maps/L_Dungeon` before changing it:
+  - about 679 editor actors;
+  - 112 candle Blueprint actors;
+  - 15 torch actors;
+  - 6 chandelier actors;
+  - at least 139 candle flame particle components plus torch/chandelier flame effects;
+  - 21 movable local lights (15 torch + 6 chandelier);
+  - the global Stationary directional light still had dynamic shadows enabled.
+- Existing project rendering settings were already Quest-oriented (`ForwardShading=True`, `MobileHDR=False`, Mobile MultiView/Instanced Stereo enabled, `vr.PixelDensity=0.5`, Lumen/reflections/VSM/ray tracing disabled), so the main safe first-pass target was scene overdraw and overlapping dynamic lighting rather than another global resolution reduction.
+- Kept every candle actor and all visible dungeon geometry in place. Deterministically retained roughly one in four candle flame groups:
+  - 37 candle flame/particle components remain visible and auto-active;
+  - 102 candle flame/particle components were set to `bVisible=false`, `bAutoActivate=false`.
+- Kept all 15 torch and 6 chandelier flame visuals, but reduced their per-instance movable-light cost:
+  - torch lights capped at radius 600 and intensity 3500 (previously radius 1000/intensity 5000);
+  - chandelier lights capped at radius 600 and intensity 6000 (some instances were around intensity 29,374 and radius 828);
+  - all 21 local lights remain shadowless.
+- Disabled only `castDynamicShadows` on the global Stationary directional light. Static shadow support remains enabled.
+- Saved `L_Dungeon` and ran PIE. Runtime state still contained 5 initial Goblins, 3 Orcs, 1 Boss, and 1 player Pawn. No new Blueprint runtime/compile/broken-reference error was produced; the matching OpenXR ensure messages in the persistent log were historical 2026-07-30 entries.
+- This pass intentionally did not merge/delete geometry, rename assets, alter enemy placement, or add level-streaming dependencies. Actual Quest FPS/frame-time improvement must be measured on the headset; the next escalation, if still needed, is repeated-mesh instancing or room/floor streaming.
+
+## 2026-07-31 BP_XRPawn stair ascent and wall blocking
+
+- Updated only `/Game/XRFramework/Blueprints/BP_XRPawn.ApplySmoothLocomotion`; no dungeon geometry or input mappings changed.
+- Confirmed the Pawn already has `PlayerBodyCollision` (`CapsuleRadius=40`, `CapsuleHalfHeight=90`, `Pawn`, `QueryAndPhysics`) but it is attached below the tracked Camera, while `VROrigin` is the non-colliding root. Therefore `AddActorWorldOffset(bSweep=true)` alone cannot rely on root-component collision to stop movement.
+- Kept the VR component hierarchy unchanged to avoid disturbing HMD/controller transforms and strengthened the existing manual capsule-trace movement gate:
+  - the original body-height capsule trace remains the first obstruction check;
+  - when blocked, a second capsule trace runs over the same movement delta at `+45 cm`;
+  - if the elevated trace also hits, the movement branch terminates, so tall walls cannot be crossed;
+  - if the elevated trace is clear, the movement delta gains `Z = VectorLength(horizontal delta)`, producing a continuous 1:1 horizontal-to-vertical rise (45-degree ascent) while the left stick is held forward;
+  - unobstructed floor movement still uses the original horizontal delta.
+- Removed the old executed `+45 -> horizontal -> -45` step sequence from the movement path because it depended on root Sweep collision that the Pawn hierarchy does not provide. Its old nodes remain disconnected and cannot execute.
+- `BP_XRPawn` compiled with warnings treated as errors and saved.
+- Ran `/Game/Maps/L_Dungeon` in PIE: `BP_XRPawn_C_0` spawned normally and no `Blueprint Runtime Error`, `Accessed None`, `Broken Reference`, or compile error appeared. Unreal MCP cannot synthesize the VR left-stick axis, so the final physical stair/wall feel still requires a headset/controller play check.
+
 ## 2026-07-31 L_Dungeon enemy placement and zone-limited navigation
 
 - Modified `/Game/Maps/L_Dungeon` without changing visible dungeon geometry.
@@ -957,3 +993,24 @@ prompts/07_WaveSystem.md (BP_WaveManager) 구현 완료: Wave1 = BP_Goblin 3마�
 - `Rampage_Effort_Ability_Ultimate_Grow`(그냥 중간중간 한 번씩): `BP_Boss.IdleFlourish`는 원래 `State=="Idle"`일 때 6~12초 랜덤 간격으로 재귀 타이머를 걸며 랜덤 유휴 애니메이션을 재생하는 함수라, 이 "가끔 한 번씩" 트리거에 정확히 들어맞음 — `PlayAnimation.then → PlaySound2D(Grow) → SetTimer(재귀 재예약)`으로 스플라이스.
 - 6곳 모두 스플라이스 후 `get_node_infos`로 재조회해서 exec 체인이 의도대로 끊기지 않고 이어졌는지 전부 확인(fan-out 덮어쓰기 버그 방지용 검증).
 - `BP_Boss` 컴파일 클린, 저장 완료. `L_Test` 재로드 후 PIE 로그에 `Accessed None`/`Blueprint Runtime Error`/`Broken Reference` 없음. 실제 전투 중 사운드 타이밍이 어울리는지는 사용자 플레이 테스트 필요.
+
+# 2026-07-31 L_Dungeon NavMesh rebuild
+
+- 던전 성능 최적화 작업 후 실행 시 내비게이션 리빌드 필요 메시지가 표시된다는 사용자 보고를 확인.
+- `/Game/Maps/L_Dungeon`에서 Unreal Editor의 `Build Paths`를 실행.
+- `RecastNavMesh-Default`(agent radius 35) 내비게이션 빌드가 0.01초에 정상 완료됨.
+- 재빌드 결과를 `/Game/Maps/L_Dungeon`에 저장.
+- 5초 워밍업으로 PIE를 실행해 재검증했으며, 성공한 빌드 이후 `Navigation needs to be rebuilt`, `ConstructTiledNavMesh`, `Unable to find RecastNavMesh` 또는 새로운 내비게이션 경고가 발생하지 않음.
+- 영구 에디터 로그에 이전 세션의 내비게이션 경고는 남아 있지만 이번 PIE 검증에서는 재발하지 않음.
+
+# 2026-07-31 L_Dungeon 시작 위치 및 조이스틱 입력 점검
+
+- 시작 홀에 `PlayerStart`와 `PlayerStart_0` 두 개가 있어 실행마다 선택 대상이 달라질 수 있음을 확인.
+- 두 시작 지점을 모두 문에서 300cm 더 안쪽으로 이동:
+  - `PlayerStart`: `(3150, -3750, -400)` → `(3150, -4050, -400)`
+  - `PlayerStart_0`: `(3050, -3750, -400)` → `(3050, -4050, -400)`
+- 새 위치의 바닥을 월드 트레이스로 확인하고 `/Game/Maps/L_Dungeon` 저장.
+- PIE에서 플레이어가 실제로 `(3050, -4050, -400)`에 스폰되는 것을 확인.
+- `/Game/XRFramework/Input/IMC_Default`의 기본 매핑에 `IA_Move → OculusTouch_Left_Thumbstick_2D`가 존재하고, `IA_Move`는 `Axis2D`로 설정되어 있음을 확인.
+- PIE 로그에 새로운 Blueprint, Enhanced Input 또는 Collision 오류 없음.
+- MCP는 물리 Quest 컨트롤러 축 입력을 발생시킬 수 없으므로 실제 스틱으로 이동하는 최종 확인은 헤드셋 플레이 테스트가 필요.
