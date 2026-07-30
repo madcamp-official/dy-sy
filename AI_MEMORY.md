@@ -706,4 +706,24 @@ prompts/07_WaveSystem.md (BP_WaveManager) 구현 완료: Wave1 = BP_Goblin 3마�
 - No source assets or Blueprints were deleted or renamed; only actor instances in `L_Dungeon` were removed.
 - Saved `/Game/Maps/L_Dungeon`, then re-queried the scene: 0 camera actors and exactly 1 light actor (`LightSource`) remain.
 - No Blueprint was modified, so there was no Blueprint compile target.
+
+# 2026-07-30 세 가지 재발 버그 근본원인 규명 및 수정 (오른손 검 햅틱 / 오크 공격 방향 / 보스 파이어볼 사거리)
+
+사용자가 이전 라운드에서 "고쳤다"고 보고된 세 가지 버그가 재플레이 후에도 여전히 재현된다고 지적. 이번엔 표면적 증상만 만지지 않고 각 그래프를 `get_connected_subgraph`로 끝까지 추적해 실제 원인을 특정함.
+
+- **오른손 검 햅틱 미작동**: `BP_Sword.TrySwordDamage`가 `ApplyDamage` 이후 `PlayRightHandHitHaptic`을 호출하기 위해 플레이어 폰을 얻는 방법이 `GetOwner()→CastToBP_XRPawn`이었음. `EquippedSword`는 `BP_XRPawn`의 **자손 액터 컴포넌트(Child Actor Component)**라서 이론상 `Owner`가 자동으로 채워져야 하지만, 실제로는 이 경로가 신뢰성 있게 동작하지 않았던 것으로 보임(왼손 마법 햅틱은 `BP_XRPawn` EventGraph 내부에서 `Self`로 직접 호출되어 항상 성공했던 것과 대조적). `GetOwner()` 의존을 제거하고 `GetPlayerPawn(0)→CastToBP_XRPawn`으로 교체(왼손 마법 경로와 동일한, 이미 검증된 패턴). 추가로 사용자 요청대로 양손 햅틱을 훨씬 강하고 길게 조정: 오른손 Amplitude 0.8→1.0, 지속시간 0.5s→1.2s / 왼손 Amplitude 0.9→1.0, 지속시간 0.9s→1.6s.
+- **오크(`BP_Enemy`) 공격 방향이 엉뚱함**: `ChaseTick`에서 공격 사거리 안에 들어오면 `StopMovement`만 호출하고 끝 — 플레이어를 바라보도록 회전시키는 로직이 아예 없었음. 즉 오크는 추격 중 마지막으로 향하고 있던 이동 방향(내비게이션 경로상의 각도)을 그대로 유지한 채 공격 애니메이션을 재생했고, 이는 플레이어 위치와 무관한 방향일 수 있었음. `StopMovement.then`과 기존 `ClearTimerByFunctionName("ChaseTick")` 사이에 `FindLookAtRotation(내 위치→타겟 위치)→SetActorRotation`을 스플라이스로 삽입해 공격 준비(AttackWindup) 진입 시점에 플레이어를 정면으로 바라보도록 수정. `BP_Goblin.ChaseTick`은 구조가 달라(`StopMovement` 노드 자체가 없음) 동일 버그가 없음을 확인, 손대지 않음.
+- **보스 파이어볼이 "멀리 던지지" 않고 자기 자리 근처에서 터짐**: 두 가지 원인이 겹쳐 있었음. (1) `BP_Boss.CastFireball`의 스폰 위치가 보스 자신의 `GetActorLocation()` 그대로였음(오프셋 없음) — `BP_BossFireball.FireballMesh`는 `QueryAndPhysics`/`BlockAllDynamic` 콜리전(플레이어용 `BP_Fireball`의 `QueryOnly`/`OverlapAllDynamic`과 다름)이라, 스폰되자마자 보스 자신의 캡슐과 즉시 블로킹 충돌해 `OnProjectileStop`이 거의 0거리에서 발동했음. (2) `ProjectileMovement.ProjectileGravityScale=1`이라 설사 자기충돌을 피해도 중력으로 금방 떨어졌음. 수정: `CastFireball`에 `FindLookAtRotation` 결과를 `GetRotationXVector`로 방향 벡터화한 뒤 `보스위치 + 방향*300`을 새 스폰 위치로 계산해 보스 캡슐 밖에서 스폰되도록 함(`MakeTransform.Location` 재배선). `ProjectileGravityScale`은 1→0으로 변경(플레이어용 파이어볼과 동일하게 무중력 직선 비행). 기존 `OnProjectileStop` 기반 데미지/파괴 로직(Block 콜리전 의존)은 그대로 보존 — Overlap 방식으로 바꾸지 않음.
+- 세 블루프린트(`BP_Sword`, `BP_XRPawn`, `BP_Boss`, `BP_BossFireball`) 모두 exec 체인을 `get_node_infos`로 전후 재확인 후 컴파일 클린, 저장 완료.
+- `L_Test`를 명시적으로 재로드하고 PIE 실행(`UEDPIE_0_L_Test` 경로 접두어 확인) — 로그에 새로운 Blueprint Runtime Error/Accessed None 없음을 확인. 다만 PIE 중에는 신규 액터 스폰이 금지되어(`Cannot create actors while PIE is active`) 오크를 직접 배치해 회전을 육안으로 관찰하는 실측 테스트는 못 했음; 그래프 구조/데이터 배선 검증과 로그 클린 확인까지가 이번 세션에서 가능했던 검증의 한계였고, 실제 체감(특히 햅틱 강도, 전투 중 회전 타이밍)은 사용자의 실제 플레이 확인이 필요함.
+
+# 2026-07-30 검 타격음 추가 + 보스 인트로에서 즉시 파이어볼→전투 진입하도록 변경
+
+- **검 타격 사운드**: `BP_Sword.TrySwordDamage`에서 데미지 적용 성공 경로 마지막(`SpawnSystemAtLocation`(칼 이펙트) 뒤, 기존에 unconnected였던 `then` 핀)에 `PlaySoundAtLocation`을 스플라이스로 추가. 사운드는 `/Game/Game_Item/Equip/Cue/Cue_ToolUseHammerAx14_Cue_Cue`, 위치는 기존 VFX와 동일한 `GetActorLocation(OtherActor)` 재사용. 검이 적을 때릴 때마다(=`ApplyDamage` 성공 시) 재생됨.
+- **보스가 멀리 있는 플레이어를 인식 못 해 공격을 안 하던 문제**: 서브에이전트로 `BP_Boss.EventGraph`를 전수 조사해서 원인 확정.
+  - `BeginPlay`는 포효(`SelectScreen_Emote`, 4.47초) → `Idle` 루프 애니메이션 → UI/무브먼트 세팅 → 세 개의 반복 타이머를 무조건 예약: `CheckPlayerDistance`(0.2초 간격), `CastFireball`(20초 간격, 상태/거리 무관하게 항상 발사), `IdleFlourish`(1회성, 랜덤 딜레이).
+  - `CheckPlayerDistance`(커스텀 이벤트)는 매 0.2초마다 `State=="Idle" AND DistanceTo(Player)<=SenseRadius(1500)`일 때만 `OnSenseBeginOverlap`을 호출해서 전투(Chase)로 전환시킴 — 즉 플레이어가 스폰 시점에 1500유닛보다 멀리 있으면 그 범위 안으로 들어올 때까지 영원히 `Idle` 상태로 남아 근접 공격을 전혀 안 함(파이어볼만 20초마다 상태와 무관하게 날아옴).
+  - 물리적 `OnComponentBeginOverlap(SenseSphere)` 이벤트 노드는 모든 출력 핀이 완전히 미연결 상태(죽은 코드)로 확인됨 — 실제 감지는 전부 폴링(`CheckPlayerDistance`) 방식으로만 동작 중이었음.
+  - 사용자 요청("어차피 던전에서는 한정된 공간에 배치할 거라 입장하면 바로 보여야 함")에 따라, `BeginPlay`의 타이머 예약 체인 끝(`IdleFlourish` 타이머 설정 직후, 기존에 이어지던 헬스바 위젯 관련 `CastToBP_XRPawn` 앞)에 `CastFireball()` 직접 호출 → `OnSenseBeginOverlap(self, GetPlayerPawn(0))` 직접 호출을 스플라이스로 추가. 이제 포효 인트로가 끝나자마자 거리 상관없이 파이어볼 1발을 던지고 바로 `State=Chase`로 전환되어 추격/공격을 시작함. `CheckPlayerDistance`의 0.2초 폴링은 그대로 남겨뒀지만 이 시점 이후 `State`가 더 이상 `"Idle"`이 아니므로 자연히 아무것도 하지 않는 무해한 상태가 됨(제거 불필요).
+  - `BP_Sword`, `BP_Boss` 모두 컴파일 클린, 저장 완료. `L_Test` 재로드 후 PIE 재확인 — 새 런타임 에러 없음. 다만 이번에도 `L_Test`에는 배치된 `BP_Boss` 인스턴스가 없어서(고블린만 존재) 실제 인트로 연출 육안 검증은 못 했음 — 사용자의 던전 맵 실플레이 확인 필요.
 - Ran `/Game/Maps/L_Test` in PIE and found no `Blueprint Runtime Error`, `Accessed None`, or `Broken Reference`; stopped PIE and restored `/Game/Maps/L_Dungeon` as the loaded editor level.
