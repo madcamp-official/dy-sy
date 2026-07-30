@@ -665,3 +665,12 @@ prompts/07_WaveSystem.md (BP_WaveManager) 구현 완료: Wave1 = BP_Goblin 3마�
 - **와일드카드 곱하기 노드 재확인 사항**: `find_node_types`로 "곱하기"(한글) 검색해서 나온 `유틸리티|연산자|곱하기`로 `create_node`를 호출하면, 핀이 아직 아무것도 안 연결된 시점엔 `get_node_infos`가 이 노드의 `type_id`를 엉뚱하게 `유틸리티|시간관리|Seconds*FrameRate`로 표시함(당황할 수 있음) — 이는 버그가 아니라 와일드카드가 아직 타입 미확정 상태일 때의 임시 표시일 뿐이며, `BreakVector`의 구체적인 `float` 출력 핀을 A에 연결하는 순간 즉시 `수학|플로트|float*float`로 올바르게 굳어짐(재조회로 확인함). 이번에도 PromotableOperator의 출력을 다른 PromotableOperator의 입력에 직결하지 않고 항상 `MakeVector` 같은 일반 `CallFunction` 노드를 매개로 거치게 해서 기존에 문서화된 타입 오염 버그를 피함.
 - 3개 블루프린트(`BP_Boss`는 무변경이라 재컴파일만, `BP_Enemy`, `BP_Goblin`) 전부 컴파일 에러 0건, 새로 만든 두 exec 체인(오크 PlayAnimation, 고블린 CastToCharacter→LaunchCharacter) 전부 `get_node_infos`로 `FunctionEntry`부터 끝까지 실제 연결 확인 완료([[feedback_verify_exec_pins]] 절차 계속 적용). `save_assets` 저장 완료, L_Test PIE 시작/종료 확인 — `Blueprint Runtime Error`/`Accessed None`/`Broken Reference` 없음.
 - **PIE로 검증 불가능했던 부분(사람 확인 필요)**: MCP로는 PIE 중 데미지 주입이 불가능해 실제 피격 애니메이션/넉백이 자연스러운지 실측하지 못함 — 사람이 직접 (1) 오크가 맞을 때 `axe_hit1` 모션이 스윙 애니메이션을 자연스럽게 끊고 들어가는지, (2) 고블린의 넉백형 스태거가 너무 크거나 작지 않은지(현재 XY 180cm/s, Z 180cm/s로 임의 설정 — 몸집/캡슐 크기 대비 과하면 값 하향 조정 필요), (3) 보스의 기존 HitReact_Front가 여전히 잘 보이는지 확인 필요.
+
+# 2026-07-30 Tutorial corridor door placement
+
+- Confirmed the mausoleum tutorial room connects to the corridor through the arch centered near world location `(3150, -3600, -500)` in `/Game/Maps/L_Dungeon`.
+- Reused the existing Medieval Dungeon doorway assets through `/Game/Blueprints/Tutorial/BP_TutorialDoor`; no source dungeon asset was deleted or renamed.
+- Placed `BP_TutorialDoor` at `(3150, -3600, -500)` with yaw `90` and assigned it to the `Tutorial` outliner folder.
+- `BP_TutorialDoor` compiles with warnings treated as errors, and both the Blueprint and `L_Dungeon` were saved.
+- Verified the intended corridor-side swing axes: left leaf yaw `-100`, right leaf yaw `+100`.
+- The `OpenDoor` custom event exists for the later tutorial-complete hookup, but its smooth two-leaf movement graph is not yet connected. An Unreal MCP component-getter creation limitation prevented saving a valid movement graph; invalid experimental nodes were removed before compile/save.
