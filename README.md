@@ -70,8 +70,6 @@ Content/
 
 ## Docs
 
-이 프로젝트는 AI 에이전트(Codex/Claude + Unreal MCP)가 블루프린트를 직접 조작하며 개발한다.
-
 - [AGENTS.md](AGENTS.md) — AI 작업 공통 규칙
 - [AI_MEMORY.md](AI_MEMORY.md) — 세션별 작업 이력/근본 원인 분석
 - [docs/GameDesign.md](docs/GameDesign.md) — 기획 범위, 기능 삭제 우선순위
