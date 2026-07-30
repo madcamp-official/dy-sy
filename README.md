@@ -1,8 +1,8 @@
-# ArcaneTrialVR
+# Dungeon VR
 
 Meta Quest 3 스탠드얼론 VR 판타지 액션 데모. 검과 화염구로 웨이브를 돌파하고 보스를 쓰러뜨린다.
 
-매드캠프 2인 팀 / 개발 기간 7일 / 목표 플레이타임 3~5분
+목표 플레이타임 3~5분
 
 ## Requirements
 
