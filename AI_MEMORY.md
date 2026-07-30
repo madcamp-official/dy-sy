@@ -1,5 +1,45 @@
 # AI Memory
 
+## 2026-07-31 Empty wide tutorial panel texture
+
+- Created a standalone blank fantasy UI panel based on the tutorial-window visual style.
+- Unreal asset: `/Game/UI/Tutorial/T_TutorialEmptyWidePanel`
+- Final source PNG: `Content/UI/Tutorial/SourceArt/T_TutorialEmptyWidePanel.png`
+- Chroma source PNG: `Content/UI/Tutorial/SourceArt/T_TutorialEmptyWidePanel_Chroma.png`
+- Final dimensions: `2112 x 499` (approximately `4.23:1`); transparent exterior and an empty dark stone interior.
+- Texture settings verified: `TEXTUREGROUP_UI`, `TMGS_NoMipmaps`, `TC_EditorIcon`, alpha enabled, sRGB enabled, Never Stream, X/Y Clamp.
+- No map or Blueprint asset was changed for this standalone texture task.
+
+## 2026-07-31 Tutorial start panel and HUD gating
+
+- Modified only `/Game/Blueprints/Tutorial/BP_TutorialManager`; no map, Pawn, HUD, GameResult widget, or other Blueprint asset was modified.
+- `BP_TutorialManager` remains the existing `ActorComponent` owned by `BP_XRPawn`.
+- On component BeginPlay, `ShowTutorial` now:
+  - hides `BP_XRPawn.PlayerHUDWidget`;
+  - shows the existing `GameResultWidget` and sets its draw size to 1536x1024;
+  - reuses the runtime `WBP_GameResult` instance without changing the source asset;
+  - switches to its Victory layer, replaces the panel brush with `/Game/UI/Tutorial/T_TutorialPanel`;
+  - removes the runtime Victory background/title and clears the old restart-button child;
+  - stretches the tutorial panel to the full draw area;
+  - positions a transparent hit-test button over the baked `시작하기` area;
+  - removes the original restart click bindings and binds the button to `StartTutorial`.
+- `StartTutorial` now hides the tutorial/GameResult widget and restores `PlayerHUDWidget`, exposing the starting hall behind the transparent tutorial panel.
+- Compiled `BP_TutorialManager` with warnings treated as errors and saved it.
+- `/Game/Maps/L_Test` PIE verified the initial gating state: `PlayerHUDWidget.bVisible=false`, `GameResultWidget.bVisible=true`, and `GameResultWidget.DrawSize=1536x1024`. No new `Blueprint Runtime Error`, `Accessed None`, `Broken Reference`, or compile error occurred in the final PIE run.
+- Unreal MCP cannot synthesize the physical Quest controller pointer click; the final controller interaction still needs a headset check. The button delegate and `StartTutorial` graph are compiled and connected.
+
+## 2026-07-31 Transparent tutorial instruction panel texture
+
+- Used the provided instruction-window image as a visual/composition reference and generated one standalone dark-fantasy tutorial panel without the dungeon, walls, floor, or torch background.
+- Preserved the four-column tutorial layout, Korean instructions, controller/magic illustrations, bottom guidance, and `시작하기` button in a single 1536x1024 image.
+- Removed the flat green outer background to alpha and retained the source files at:
+  - `Content/UI/Tutorial/SourceArt/T_TutorialPanel_Chroma.png`
+  - `Content/UI/Tutorial/SourceArt/T_TutorialPanel.png`
+- Imported and saved `/Game/UI/Tutorial/T_TutorialPanel`.
+- Matched the existing GameResult texture settings: `TEXTUREGROUP_UI`, `TMGS_NoMipmaps`, `TC_EditorIcon`, sRGB enabled, alpha preserved, `NeverStream=true`; also set X/Y addressing to Clamp.
+- No existing asset or Blueprint was modified, so Blueprint compilation was not applicable.
+- Ran `/Game/Maps/L_Test` in PIE and found no `Blueprint Runtime Error`, `Accessed None`, `Broken Reference`, or `Compile Error`; restored `/Game/Maps/L_Dungeon`.
+
 ## 2026-07-31 L_Dungeon Quest performance first-pass optimization
 
 - Diagnosed `/Game/Maps/L_Dungeon` before changing it:
@@ -1039,3 +1079,22 @@ prompts/07_WaveSystem.md (BP_WaveManager) 구현 완료: Wave1 = BP_Goblin 3마�
 - 이동 기준 회전도 `PlayerCameraManager.GetCameraRotation` 전체를 직접 쓰는 대신 `BreakRotator → Yaw만 MakeRotator(Roll=Pitch=0)`를 거쳐 Forward/Right Vector를 계산하도록 변경. 이제 위/아래 시선 피치와 무관하게 수평 이동.
 - 기존 벽 충돌 Capsule Trace, 45cm 위쪽 계단 우회 검사, 이동 속도와 발자국 로직은 유지.
 - `BP_XRPawn` warnings-as-errors 컴파일 및 저장 완료. `L_Dungeon` PIE에서 새 Blueprint Runtime Error, Accessed None, Enhanced Input 또는 Collision 오류 없음.
+
+# 2026-07-31 튜토리얼 중앙 문구 기반 구현
+
+- 새 ActorComponent Blueprint `/Game/Blueprints/Tutorial/BP_TutorialManager` 생성.
+- `BP_XRPawn`에 `TutorialManager` 컴포넌트로 추가하여 맵에 별도 액터를 배치하지 않고 모든 레벨에서 자동 생성되도록 구성.
+- 기존 `WBP_PlayerHUD`의 `BannerContainer`/`BannerTextBlock`/`ShowBanner`를 재사용하고, BannerContainer 앵커를 화면 정중앙 `(0.5, 0.5)`으로 이동. 새 Tick/UI 위젯은 추가하지 않음.
+- `BP_TutorialManager.ShowTutorial(Message)`가 Owner `BP_XRPawn → PlayerHUDWidget → WBP_PlayerHUD.ShowBanner(Message, 3초)` 경로로 중앙 문구를 표시하도록 구현.
+- 요청 문구 8개에 대응하는 공개 함수 생성:
+  - `StartTutorial`: `검을 들어 힘을 깨우십시오`
+  - `SwordPickedUp`: `검을 휘둘러 보십시오`
+  - `SwordSwung`: `좋습니다`
+  - `ReachedDoor`: `앞으로 나아가십시오`
+  - `PassedDoor`: `검으로 적을 처치하십시오`
+  - `AttackPotionAcquired`: `공격 마법을 획득했습니다`
+  - `ReachedSecondFloor`: `더 강한 적입니다`
+  - `DefensePotionAcquired`: `방어 마법을 획득했습니다`
+- 현재 존재하는 입력 이벤트 중 오른손 Grab의 `Started`를 `TutorialManager.SwordPickedUp`에 연결해 한 번 누를 때 한 번 표시되도록 함.
+- 현재 프로젝트에는 설명창/시작하기 버튼 WBP와 방어 포션 전용 트리거가 존재하지 않아 해당 소스 이벤트에는 아직 연결할 대상이 없음. 나머지 공개 함수는 설명창 및 맵 트리거 작업자가 직접 호출할 수 있는 준비 상태.
+- `BP_TutorialManager`, `BP_XRPawn`, `WBP_PlayerHUD` 컴파일 및 저장 완료. `L_Dungeon` PIE에서 TutorialManager 런타임 컴포넌트 존재 확인, 새 Runtime Error/Accessed None 없음.
