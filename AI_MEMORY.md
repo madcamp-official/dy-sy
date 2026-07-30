@@ -687,3 +687,23 @@ prompts/07_WaveSystem.md (BP_WaveManager) 구현 완료: Wave1 = BP_Goblin 3마�
 - **이 세션 이후 반드시 지킬 새 규칙(★★★ 매우 중요 ★★★)**: 이 MCP 환경에서 **이미 연결된 exec 출력 핀에 `connect_pins`로 새 대상을 연결하면 팬아웃이 아니라 기존 연결이 삭제된다.** 어떤 노드의 `then`(또는 다른 exec 출력) 핀에 새 로직을 이어붙이기 전에는 **반드시 먼저 `get_node_infos`로 그 핀의 `connected_pins`가 이미 비어있지 않은지 확인**할 것. 이미 뭔가 연결돼 있다면: 새 노드를 그 핀에 바로 연결하지 말고, `[원래 출력 핀] → [내 신규 로직 체인] → [원래 있던 대상 노드]` 순서로 스플라이스해서 원래 로직이 여전히 실행되도록 만들 것. 이는 [[feedback_verify_exec_pins]]보다 더 근본적인 규칙임 — "내가 만든 연결이 살아있는지"뿐 아니라 "내가 손댄 핀에 원래 있던 연결이 여전히 살아있는지"까지 항상 같이 확인해야 함.
 - **PIE로 검증 불가능했던 부분(사람 확인 필요, 필수)**: (1) 왼손 파이어볼을 연속으로 여러 번 재사용 가능한지, (2) 검으로 적을 벨 때 히트 이펙트가 다시 보이는지, (3) 보스를 체력 0까지 때리면 실제로 죽는지, (4) 보스 파이어볼이 훨씬 멀리서도 플레이어에게 명중하는지 + 보스 근접/슬램 공격이 실제로 플레이어 체력을 깎는지, (5) 오크가 맞은 뒤에도 계속 움직이고 공격하는지, (6) 검/마법 양손 햅틱이 뚜렷하게 오래 느껴지는지 — 전부 사람이 직접 Quest로 플레이해서 확인 필요.
 - **★ 중요한 자기 실수 정정**: 위 "6개 블루프린트 PIE 시작/종료 확인" 문구가 실제로는 `L_Test`가 아니라 기본 로드 레벨인 `L_Dungeon`에서 실행됐음을 뒤늦게 발견함(세션 맨 처음에는 `L_Test`를 명시적으로 로드했었지만, 이후 여러 라운드(햅틱/히트리액션/이번 버그수정) 동안 `StartPIE` 전에 현재 레벨을 재확인하지 않았고, 그 사이 에디터가 `L_Dungeon`으로 되돌아가 있었음 — 사용자가 직접 지적해서 발견). `L_Dungeon`에는 `BP_WaveManager`/적 배치가 `L_Test`와 다를 수 있어 "에러 없음" 검증이 실제로 무의미했을 가능성이 있음. **`L_Test`로 다시 로드해서 재검증함**: `BP_XRPawn_C_0`/`BP_WaveManager_C_0`/`BP_Goblin_C_0~4`가 `UEDPIE_0_L_Test` 하위에 정상 존재(경로 접두어로 실제 L_Test에서 실행됐음을 확인), 플레이어 `CurrentHealth=100/100`, `bFireballReady=true`, `bDefenseReady=true` 정상, `Blueprint Runtime Error`/`Accessed None`/`Broken Reference` 없음. **앞으로 규칙**: 이 프로젝트에서 `StartPIE`를 부를 때마다 매번 직전에 `get_current_level`로 확인하거나 무조건 `load_level("/Game/Maps/L_Test")`를 먼저 호출할 것 — 세션 앞부분에 이미 로드했었다는 걸 절대 신뢰하지 말 것.
+
+# 2026-07-30 Tutorial corridor door placement
+
+- Confirmed the mausoleum tutorial room connects to the corridor through the arch centered near world location `(3150, -3600, -500)` in `/Game/Maps/L_Dungeon`.
+- Reused the existing Medieval Dungeon doorway assets through `/Game/Blueprints/Tutorial/BP_TutorialDoor`; no source dungeon asset was deleted or renamed.
+- Placed `BP_TutorialDoor` at `(3150, -3600, -500)` with yaw `90` and assigned it to the `Tutorial` outliner folder.
+- `BP_TutorialDoor` compiles with warnings treated as errors, and both the Blueprint and `L_Dungeon` were saved.
+- Verified the intended corridor-side swing axes: left leaf yaw `-100`, right leaf yaw `+100`.
+- The `OpenDoor` custom event exists for the later tutorial-complete hookup, but its smooth two-leaf movement graph is not yet connected. An Unreal MCP component-getter creation limitation prevented saving a valid movement graph; invalid experimental nodes were removed before compile/save.
+
+# 2026-07-30 L_Dungeon demo light and camera cleanup
+
+- Inspected the currently loaded `/Game/Maps/L_Dungeon` through Unreal MCP before editing.
+- Found 17 placed `CameraActor`/`CineCameraActor` instances used as dungeon-pack showcase cameras and removed all 17. The VR pawn camera and Blueprint-owned camera components were not touched.
+- Found 35 placed `Light` actors: one global `LightSource` plus 34 individually placed Point/Spot lights.
+- Preserved `LightSource` so the map retains a global light source, and removed the 34 generic Point/Spot demo lights for Quest performance.
+- No source assets or Blueprints were deleted or renamed; only actor instances in `L_Dungeon` were removed.
+- Saved `/Game/Maps/L_Dungeon`, then re-queried the scene: 0 camera actors and exactly 1 light actor (`LightSource`) remain.
+- No Blueprint was modified, so there was no Blueprint compile target.
+- Ran `/Game/Maps/L_Test` in PIE and found no `Blueprint Runtime Error`, `Accessed None`, or `Broken Reference`; stopped PIE and restored `/Game/Maps/L_Dungeon` as the loaded editor level.
