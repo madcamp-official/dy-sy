@@ -747,6 +747,48 @@ prompts/07_WaveSystem.md (BP_WaveManager) 구현 완료: Wave1 = BP_Goblin 3마�
 - 사운드는 `/Game/Footsteps_Volume_02/Cues/Footstep_Boots_0{1,3,5,7}_Cue` 4종 중 `RandomIntegerInRange(0,3)`으로 랜덤 선택(중첩 Branch로 분기, `PlaySoundAtLocation`을 플레이어 위치에서 재생) — 매번 똑같은 소리가 반복되지 않도록 변주.
   - 툴링 메모: `K2Node_Select`(선택 노드)의 옵션 핀은 와일드카드 상태에서 `set_pin_value`로 리터럴 애셋 경로를 바로 넣을 수 없었음(에러 발생) — 와일드카드는 실제 와이어 연결로만 타입이 확정되는 것으로 보임. 그래서 Select 대신 `Equal(Int)`+`Branch` 체인(각 브랜치가 이미 타입이 확정된 `PlaySoundAtLocation.Sound` 핀에 직접 리터럴 값을 넣는 방식)으로 우회.
 - `BP_XRPawn` 컴파일 클린, 저장 완료. `L_Test` PIE 로그 확인 — 새 런타임 에러 없음. 다만 자동화 도구로 실제 이동시켜 발소리가 들리는지 육안/청각 확인은 못 했음 — 사용자 플레이 테스트 필요.
+# 2026-07-30 Victory / Defeat result UI not appearing — diagnosis
+
+- Confirmed `/Game/UI/GameResult/WBP_GameResult` and all six imported result textures still exist.
+- Confirmed `BP_XRPawn.GameResultWidget` still uses `WBP_GameResult`, Screen space, 1280x720, visible component state.
+- Confirmed the upstream calls are intact: `BP_WaveManager` calls `ShowVictoryResult` after its victory delegate, and the player death chain calls `ShowDefeatResult` after the game-over delegate.
+- Confirmed both `BP_XRPawn` forwarding functions are fully connected through `GameResultWidget -> GetUserWidgetObject -> CastToWBP_GameResult -> ShowVictory/ShowDefeat`.
+- **Actual root cause:** inside `WBP_GameResult`, both `ShowVictory` and `ShowDefeat` have their intended `SetVisibility` nodes and correct Visible/Collapsed values, but every execution pin is disconnected. Each `FunctionEntry.then` has zero connections, and neither `SetVisibility` node has an exec input connection. Since both result layers default to `Collapsed`, neither can ever become visible.
+- `WBP_GameResult`, `BP_XRPawn`, and `BP_WaveManager` compile without errors/warnings, because disconnected nodes are structurally legal Blueprint graphs; compile success does not detect this logic break.
+- Diagnosis only in this task; no Blueprint graph was modified.
+
+# 2026-07-30 Victory / Defeat result UI execution-chain repair
+
+- Reconnected `WBP_GameResult.ShowVictory` as `FunctionEntry -> Set VictoryLayer Visible -> Set DefeatLayer Collapsed`.
+- Reconnected `WBP_GameResult.ShowDefeat` as `FunctionEntry -> Set VictoryLayer Collapsed -> Set DefeatLayer Visible`.
+- Re-read all six affected nodes and verified every execution input/output connection and visibility literal.
+- Compiled `WBP_GameResult` with warnings treated as errors and saved it successfully.
+- Ran `/Game/Maps/L_Test` in PIE; no `Blueprint Runtime Error`, `Accessed None`, `Broken Reference`, or `Compile Error` was logged.
+- Restored `/Game/Maps/L_Dungeon` as the loaded editor level afterward.
+- Full victory/defeat triggering still requires playing through the corresponding game conditions in VR, but the proven no-op inside both display functions is repaired.
+
+# 2026-07-30 Transparent game-result lettering textures
+
+- Generated and chroma-keyed three transparent PNG UI assets matching the supplied fantasy result-screen reference:
+  - `T_DefeatTitle.png` — red/silver metallic `DEFEAT`, 1532x306.
+  - `T_VictoryTitle.png` — gold metallic `VICTORY`, 1657x328.
+  - `T_RestartText.png` — ivory/gold Korean `처음으로`, 1417x380.
+- Preserved final source PNGs under `Content/UI/GameResult/SourceArt/`.
+- Imported and saved Unreal `Texture2D` assets at:
+  - `/Game/UI/GameResult/T_DefeatTitle`
+  - `/Game/UI/GameResult/T_VictoryTitle`
+  - `/Game/UI/GameResult/T_RestartText`
+- Configured all three for UI use: `TEXTUREGROUP_UI`, `TC_EditorIcon` (UI RGBA), no mipmaps, clamp X/Y, alpha preserved, sRGB enabled, never stream.
+- No Blueprint or widget hierarchy was modified in this task, so no Blueprint compile was required. The existing TextBlock widgets have not yet been replaced with Image widgets.
+
+# 2026-07-30 Cinzel font removal
+
+- User explicitly requested deletion of the added font.
+- Audited `/Game/Cinzel`: six saved composite font assets reported no external referencers.
+- Unreal MCP asset deletion returned `false` for the loaded font/composite-font packages, so it could not perform a clean in-editor delete.
+- Removed the complete physical `Content/Cinzel` folder after validating the exact absolute target. This deleted the imported `.uasset` files, `.ttf` sources, README, and OFL license copy from Content.
+- The older repository-root `Cinzel/` source files were already marked deleted in the worktree and remain deleted.
+- No Blueprint was changed. Unreal Editor may retain stale Asset Registry entries for the loaded font packages until the editor or project is restarted.
 
 # 2026-07-30 오크 검 데미지 미적용 버그 근본 원인 발견 + 발자국 간격 단축
 
