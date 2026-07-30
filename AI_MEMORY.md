@@ -800,6 +800,21 @@ prompts/07_WaveSystem.md (BP_WaveManager) 구현 완료: Wave1 = BP_Goblin 3마�
   - 검증: `SkeletalMeshTools.get_bounds`로 두 메시의 레퍼런스 포즈 바운딩 박스를 직접 수치로 비교해서 확인(오크 박스 익스텐트 Z≈103.27 vs 고블린 Z≈81.02, 반면 캡슐 기본 하프하이트는 둘 다 88로 동일했었다는 게 결정적 단서). 실제 VR 플레이로 "검이 이제 오크한테 잘 맞는지"까지는 자동화 도구로 검증 불가 — 사용자 플레이 테스트 필요.
 - **발자국 소리 간격 단축**: `BP_XRPawn.ApplySmoothLocomotion`의 누적 거리 임계값 2곳(`K2Node_PromotableOperator_9`/`_10`의 B핀, 기존 200.0)을 `100.0`으로 축소 — 발자국이 기존 대비 2배 더 자주 재생됨.
 - `BP_Enemy`, `BP_XRPawn` 컴파일 클린, 저장 완료. `L_Test` 재로드 후 PIE 로그 확인 — 새 런타임 에러 없음(기존부터 있던 `LogCrowdFollowing: RecastNavMesh 없음` 경고는 무관, 오크 관련 에러 없음). 웨이브 매니저의 오크 스폰이 이전 웨이브 클리어 후에 걸려 있어서 PIE 시작 직후에는 오크가 등장하지 않아 실제 스폰 상태 육안 확인은 못 함.
+# 2026-07-30 Game-result lettering composition
+
+- Updated `/Game/UI/GameResult/WBP_GameResult` to use the previously generated transparent lettering textures.
+- Replaced four non-variable TextBlocks with Image widgets while preserving their names, parents, and slots:
+  - `VictoryTitle` -> `T_VictoryTitle`
+  - `DefeatTitle` -> `T_DefeatTitle`
+  - `VictoryButtonText` and `DefeatButtonText` -> shared `T_RestartText`
+- Kept both subtitles, restart Button widgets, click bindings, backgrounds, panels, and result visibility functions unchanged.
+- Centered both title images at `(365,155)` with size `550x110`.
+- Centered the restart label inside both `550x105` buttons using a `300x80` brush and centered ButtonSlot alignment to avoid stretching the Korean texture across the full button.
+- Re-read the widget tree and confirmed all four widgets are Image class with the intended texture references and sizes.
+- `WBP_GameResult` compiled with warnings treated as errors and saved successfully.
+- Ran `/Game/Maps/L_Test` in PIE and found no new `Blueprint Runtime Error`, `Accessed None`, `Broken Reference`, or compile error. Existing unrelated `ABP_Goblin` unconnected state-machine warnings remain.
+- Restored `/Game/Maps/L_Dungeon` after testing.
+- Unreal MCP does not support `CaptureAssetImage` for WidgetBlueprint assets, so structural/compile/PIE verification was completed but no automated rendered WBP preview was available.
 
 # 2026-07-30 보스 전투 상황별 보이스 사운드 4종 추가
 
