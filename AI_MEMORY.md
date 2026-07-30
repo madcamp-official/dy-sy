@@ -1,5 +1,38 @@
 # AI Memory
 
+## 2026-07-31 Clickable world-space tutorial gate before the starting hall
+
+- Diagnosed why the startup instruction window could never be dismissed: `BP_XRPawn.GameResultWidget` is a **Screen**-space `WidgetComponent`, so the hijacked `시작하기` button could not be hit by `WidgetInteractionLeft/Right` (world trace on `ECC_GameTraceChannel1` / `3DWidget`). The project also had no `PressPointerKey` plumbing anywhere outside `BP_Menu`.
+- Rebuilt `/Game/UI/Tutorial/WBP_Tutorial` (previously an unused clone of `WBP_GameResult`) as the real tutorial panel:
+  - removed `VictoryLayer` / `DefeatLayer`, the `ShowVictory` / `ShowDefeat` functions, and the stale `OnClicked(VictoryRestartButton/DefeatRestartButton)` handlers;
+  - `TutorialImage` (Image, `/Game/UI/Tutorial/T_TutorialPanel`, 1536x1024, anchored 0,0);
+  - `StartButton` (Button) placed over the baked `시작하기` area at `(470, 900)` size `600x92`, transparent when idle, blue-tinted on hover/press so the VR pointer gives feedback.
+- Added a `TutorialWidget` `WidgetComponent` to `/Game/XRFramework/Blueprints/BP_XRPawn` under `VROrigin`: World space, `WBP_Tutorial`, DrawSize 1536x1024, scale 0.1, Transparent blend, two-sided, hidden by default, collision `Custom` `QueryOnly` with every channel Ignore except `3DWidget = Block` (same recipe as `BP_Menu.Widget`).
+- Rewrote `/Game/Blueprints/Tutorial/BP_TutorialManager`:
+  - added a `bTutorialActive` bool;
+  - `EventGraph`: BeginPlay -> DelayUntilNextTick -> **Delay 0.5s** -> `ShowTutorial` (the delay lets the HMD pose settle so the panel is placed at real eye height);
+  - `ShowTutorial` no longer touches `GameResultWidget` at all (victory/defeat UI is back to its original state). It hides `PlayerHUDWidget`, places `TutorialWidget` at the camera world location with the camera's yaw, `AddLocalOffset (180,0,0)`, then `SetWorldRotation(FindLookAtRotation(panel, camera))` so the panel stands 1.8 m in front at eye level facing the player; binds `StartButton.OnClicked` to `StartTutorial`; adds `/Game/XRFramework/Input/IMC_Menu` at priority 1; sets `bTutorialActive = true`.
+  - `StartTutorial` hides `TutorialWidget`, sets its collision to `NoCollision`, restores `PlayerHUDWidget`, removes `IMC_Menu`, and clears `bTutorialActive`.
+- Added click plumbing to `BP_XRPawn.EventGraph` (new nodes only, no existing chain rewired): `IA_Menu_Interact_Left_Pressed` / `IA_Menu_Interact_Right_Pressed` -> Branch on `TutorialManager.bTutorialActive` -> `PressPointerKey(LeftMouseButton)` on `Triggered`, `ReleasePointerKey` on `Canceled`/`Completed`, targeting `WidgetInteractionLeft` / `WidgetInteractionRight`. `IMC_Menu` maps those actions to the controller triggers, and because it also claims both thumbsticks at higher priority it suppresses `IA_Move`, so the player cannot walk into the starting hall until `시작하기` is pressed.
+- `WBP_Tutorial`, `BP_TutorialManager`, and `BP_XRPawn` all compile with warnings treated as errors; all assets saved.
+- `/Game/Maps/L_Dungeon` PIE verified at startup: `TutorialWidget.bVisible=true` (World space, relative `(180,0,0)`, yaw `-180`), `PlayerHUDWidget.bVisible=false`, `TutorialManager.bTutorialActive=true`, and no `Blueprint Runtime Error`, `Accessed None`, or `Broken Reference`.
+- `CaptureEditorImage` / `CaptureViewport` do not reliably capture the live PIE frame in this setup (they return a stale or editor-world frame), so the panel's on-screen appearance and the actual trigger click still need a headset check.
+- Reapplied on top of `origin/main` commit `0e22dc2 조이스틱 문제`, which had independently changed the same `BP_XRPawn.uasset` (about +41 KB). `.uasset` is binary and tracked through Git LFS, so git could not merge the two versions. The joystick commit's `BP_XRPawn` was restored on disk, the Unreal Editor was restarted so it loaded that version, and then `TutorialManager`, `TutorialWidget`, and the 14 input-handling nodes were rebuilt on top of it through MCP. `BP_TutorialManager` and `WBP_Tutorial` did not conflict.
+- Note for future merges: whenever two branches both touch a `.uasset`, the only safe resolution is to keep one side's file, restart the editor so it loads from disk, and rebuild the other side's edits through MCP. Never let the running editor save over a file that was swapped underneath it.
+
+## 2026-07-31 Restore tutorial manager component
+
+- Diagnosed the missing startup instruction window in `/Game/Maps/L_Dungeon`.
+- Runtime `BP_XRPawn_C_0` did not contain a `TutorialManager` component, so the existing `BP_TutorialManager.ReceiveBeginPlay` logic could never execute.
+- Restored one `BP_TutorialManager` component named `TutorialManager` on `/Game/XRFramework/Blueprints/BP_XRPawn`; no map asset was modified.
+- Compiled both `BP_TutorialManager` and `BP_XRPawn` with warnings treated as errors and saved them.
+- PIE verification confirmed:
+  - runtime Pawn contains `TutorialManager`;
+  - `PlayerHUDWidget.bVisible=false`;
+  - `GameResultWidget.bVisible=true`;
+  - `GameResultWidget.DrawSize=1536x1024`;
+  - no Blueprint Runtime Error, Accessed None, Broken Reference, or Compile Error.
+
 ## 2026-07-31 Empty wide tutorial panel texture
 
 - Created a standalone blank fantasy UI panel based on the tutorial-window visual style.
