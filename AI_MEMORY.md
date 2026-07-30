@@ -674,3 +674,14 @@ prompts/07_WaveSystem.md (BP_WaveManager) 구현 완료: Wave1 = BP_Goblin 3마�
 - `BP_TutorialDoor` compiles with warnings treated as errors, and both the Blueprint and `L_Dungeon` were saved.
 - Verified the intended corridor-side swing axes: left leaf yaw `-100`, right leaf yaw `+100`.
 - The `OpenDoor` custom event exists for the later tutorial-complete hookup, but its smooth two-leaf movement graph is not yet connected. An Unreal MCP component-getter creation limitation prevented saving a valid movement graph; invalid experimental nodes were removed before compile/save.
+
+# 2026-07-30 L_Dungeon demo light and camera cleanup
+
+- Inspected the currently loaded `/Game/Maps/L_Dungeon` through Unreal MCP before editing.
+- Found 17 placed `CameraActor`/`CineCameraActor` instances used as dungeon-pack showcase cameras and removed all 17. The VR pawn camera and Blueprint-owned camera components were not touched.
+- Found 35 placed `Light` actors: one global `LightSource` plus 34 individually placed Point/Spot lights.
+- Preserved `LightSource` so the map retains a global light source, and removed the 34 generic Point/Spot demo lights for Quest performance.
+- No source assets or Blueprints were deleted or renamed; only actor instances in `L_Dungeon` were removed.
+- Saved `/Game/Maps/L_Dungeon`, then re-queried the scene: 0 camera actors and exactly 1 light actor (`LightSource`) remain.
+- No Blueprint was modified, so there was no Blueprint compile target.
+- Ran `/Game/Maps/L_Test` in PIE and found no `Blueprint Runtime Error`, `Accessed None`, or `Broken Reference`; stopped PIE and restored `/Game/Maps/L_Dungeon` as the loaded editor level.
