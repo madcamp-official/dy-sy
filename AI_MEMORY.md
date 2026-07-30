@@ -726,4 +726,16 @@ prompts/07_WaveSystem.md (BP_WaveManager) 구현 완료: Wave1 = BP_Goblin 3마�
   - 물리적 `OnComponentBeginOverlap(SenseSphere)` 이벤트 노드는 모든 출력 핀이 완전히 미연결 상태(죽은 코드)로 확인됨 — 실제 감지는 전부 폴링(`CheckPlayerDistance`) 방식으로만 동작 중이었음.
   - 사용자 요청("어차피 던전에서는 한정된 공간에 배치할 거라 입장하면 바로 보여야 함")에 따라, `BeginPlay`의 타이머 예약 체인 끝(`IdleFlourish` 타이머 설정 직후, 기존에 이어지던 헬스바 위젯 관련 `CastToBP_XRPawn` 앞)에 `CastFireball()` 직접 호출 → `OnSenseBeginOverlap(self, GetPlayerPawn(0))` 직접 호출을 스플라이스로 추가. 이제 포효 인트로가 끝나자마자 거리 상관없이 파이어볼 1발을 던지고 바로 `State=Chase`로 전환되어 추격/공격을 시작함. `CheckPlayerDistance`의 0.2초 폴링은 그대로 남겨뒀지만 이 시점 이후 `State`가 더 이상 `"Idle"`이 아니므로 자연히 아무것도 하지 않는 무해한 상태가 됨(제거 불필요).
   - `BP_Sword`, `BP_Boss` 모두 컴파일 클린, 저장 완료. `L_Test` 재로드 후 PIE 재확인 — 새 런타임 에러 없음. 다만 이번에도 `L_Test`에는 배치된 `BP_Boss` 인스턴스가 없어서(고블린만 존재) 실제 인트로 연출 육안 검증은 못 했음 — 사용자의 던전 맵 실플레이 확인 필요.
+
+# 2026-07-30 방어막 파이어볼 방어 + 오크 3인화(색상별) + 파이어볼 간격/검 사거리/피격음/포션음
+
+- **보스 파이어볼 간격**: `BP_Boss.EventGraph`의 `CastFireball` 반복 타이머 20초→10초.
+- **검 사거리 확장**: `BP_Sword.SwordCollision` 박스, 손잡이 쪽 경계는 유지한 채 칼끝 방향 리치만 약 30cm 증가(반경 70→85, 위치 보정).
+- **방어막이 보스 파이어볼을 막지 못하던 문제 수정**: 원인 2가지를 모두 고침.
+  1. `BP_XRPawn.DefenseBarrierCollision`(스피어)의 콜리전 응답이 `Pawn` 채널만 Block이고 `WorldDynamic`은 Ignore라서, WorldDynamic 오브젝트 타입인 보스 파이어볼이 그냥 통과했음 → `WorldDynamic` 응답을 `ECR_Block`으로 변경.
+  2. 막혀도 `BP_BossFireball.OnProjectileStop`이 무조건 `ApplyDamage`를 호출하던 구조라 방어막에 맞아도 데미지가 들어갔음 → `BreakHitResult.HitComponent`가 `AsBP_XRPawn.DefenseBarrierCollision`과 같은지 비교하는 분기를 추가해서, 방어막에 맞은 경우엔 데미지 없이 VFX만 재생하고 파괴하도록 분리(몸통에 맞은 경우는 기존 로직 그대로 보존).
+- **오크 3마리 + 색상 구분**: `BP_WaveManager`의 오크 스폰 체인(`BindEventtoOnDestroyed`로 순차 연결된 델리게이트 체인, 기존 2마리)에 동일 패턴으로 3번째 스폰 노드를 추가(위치 X=1100, 기존 800/950과 동일선상). 색상은 이 에셋팩에 이미 `SK_Orc_green`/`SK_Orc_brown`/`SK_Orc_red`(전용 머티리얼·텍스처 포함, 같은 스켈레톤이라 `axe_*` 애니메이션 공유 가능)가 준비되어 있어서, 각 스폰 직후 `GetComponentByClass(SkeletalMeshComponent)` → `SetSkeletalMeshAsset`으로 메시만 교체(1번=green, 2번=brown, 3번=red). 동적 머티리얼 파라미터 방식 대신 기성 메시 스왑을 사용해 리스크를 낮춤.
+- **보스 파이어볼 발사음**: `BP_Boss.CastFireball`에서 파이어볼 스폰 직후(`SpawnActorFromClass.then`, 기존 미연결) `Cue_ExplosiveBarrelC15`를 보스 위치에서 `PlaySoundAtLocation`.
+- **마법 포션(파이어볼/방어 쿨다운 회복) 획득음**: `BP_XRPawn.EventGraph`에서 쿨다운 종료 시 `bFireballReady=true`/`bDefenseReady=true`를 세팅하는 두 지점 직후에 각각 `Cue_Ashorttactilesou1`을 `PlaySound2D`로 재생(요청하신 "총 2번" = 파이어볼 쿨다운 회복 1회 + 방어막 쿨다운 회복 1회).
+- 수정한 5개 블루프린트(`BP_Boss`, `BP_Sword`, `BP_XRPawn`, `BP_WaveManager`, `BP_BossFireball`) 전부 컴파일 클린, 저장 완료. `L_Test` 재로드 후 PIE로 로그 확인 — 새 런타임 에러 없음. 다만 오크 3인 스폰은 웨이브 매니저의 웨이브 진행 조건(이전 웨이브 클리어) 뒤에 걸려 있어서 PIE 시작 직후 5초 안에는 등장하지 않았음 — 실제 웨이브를 진행시켜야 스폰/색상까지 육안 확인 가능, 사용자 플레이 테스트 필요.
 - Ran `/Game/Maps/L_Test` in PIE and found no `Blueprint Runtime Error`, `Accessed None`, or `Broken Reference`; stopped PIE and restored `/Game/Maps/L_Dungeon` as the loaded editor level.
