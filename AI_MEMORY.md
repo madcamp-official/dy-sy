@@ -1,5 +1,17 @@
 # AI Memory
 
+## 2026-07-30 Right-stick turn removal and L_Dungeon directional-light optimization
+
+- Removed all four `IA_Turn` mappings from `/Game/XRFramework/Input/IMC_Default`: Valve Index right thumbstick X, Oculus Touch right thumbstick X, Vive right trackpad X, and PICO right thumbstick X. Left-stick movement and all other mappings remain unchanged.
+- Verified the mapping context now contains zero mappings targeting `/Game/XRFramework/Input/Actions/IA_Turn`.
+- Inspected `/Game/Maps/L_Dungeon` live through Unreal MCP: 661 total actors; `LightSource` is a DirectionalLight whose component was `Movable`, with `DynamicShadowDistanceMovableLight=20000` and 3 cascades. The level also contains `SkyLight_1`, contrary to the earlier claim that it had only one light.
+- Changed `LightSource.LightComponent0` mobility from `Movable` to `Stationary`, set `DynamicShadowDistanceStationaryLight=0`, and reduced dynamic shadow cascades from 3 to 1. Saved `IMC_Default` and `L_Dungeon`.
+- Project renderer configuration already has Lumen GI/reflections, Virtual Shadow Maps, ray tracing, and mesh distance fields disabled; static lighting is allowed.
+- Did not merge prop actors: the project rule forbids deleting existing actors, while merging without removing sources would duplicate visible geometry and add render cost. MCP has `merge_actors` but no safe in-place conversion of existing actors to ISM/HISM.
+- Did not run Build Lighting because the connected Unreal MCP exposes no lighting-build operation. The Stationary light is ready for a manual lighting build; until then Unreal may report unbuilt lighting.
+- No Blueprint graph was modified, so Blueprint compile was not applicable.
+- Ran `/Game/Maps/L_Test` in PIE and found no `Blueprint Runtime Error`, `Accessed None`, `Broken Reference`, or `Compile Error`; restored `/Game/Maps/L_Dungeon` afterward.
+
 ## 2026-07-29 Boss still faced left after bCanStrafe fix — real cause was a missing mesh yaw offset (correction to the entry below)
 
 User playtested the previous round's fixes: boss STILL always faced left while running (bCanStrafe=false alone did not fix it), Orc telegraph was better but wanted more range.
