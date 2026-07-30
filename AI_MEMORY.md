@@ -1,5 +1,14 @@
 # AI Memory
 
+## 2026-07-31 Floor-anchor clearance in ApplySmoothLocomotion
+
+- Symptom: smooth locomotion worked at first and then stopped completely after roughly a second of walking.
+- The floor anchoring in `/Game/XRFramework/Blueprints/BP_XRPawn.ApplySmoothLocomotion` placed the trace capsule with zero clearance. Chain: `LineTraceByChannel` from `bodyLoc + 200Z` to `bodyLoc - 200Z`, `SelectFloat(hit ? hitZ : actorZ)`, then `MakeVector(0,0,90)` -> `MakeTransform` -> `TransformLocation(floorZ)` produced a capsule centre at `floorZ + 90`. With `CapsuleHalfHeight = 90` the capsule bottom sat exactly on the floor plane.
+- On flat ground the body capsule trace therefore grazed the floor and reported "blocked" every step, diverting movement into the 45 cm step-climb path. `StepClimbAccum` accumulated until the `InRange(0, 50)` cap rejected it and movement stopped outright.
+- Fix: `MakeVector` Z on the anchor `90.0 -> 95.0` (node `K2Node_CallFunction_38`), giving 5 cm of clearance.
+- Safe to raise: that anchored vector (`K2Node_CallFunction_41`) only feeds trace endpoints — `CapsuleTraceByChannel` start/end and the `+45` elevated trace. The pawn is moved solely by `AddActorWorldOffset` with delta vectors, so the anchor change cannot make the player float.
+- `BP_XRPawn` compiled with warnings as errors and saved; `L_Dungeon` PIE produced no runtime errors. Whether the graze/stall is actually gone still needs a headset walk test.
+
 ## 2026-07-31 Tutorial mapping context was killing both thumbsticks
 
 - User reported that after the tutorial change neither the left nor the right joystick worked.
