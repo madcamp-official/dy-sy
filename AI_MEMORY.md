@@ -1,5 +1,87 @@
 # AI Memory
 
+## 2026-07-31 Left-stick movement dead again — floor-anchor fix had been rolled back
+
+- Symptom reported: left thumbstick no longer moves the player forward/back/left/right.
+- Input layer was verified intact, so it is NOT a mapping problem:
+  - `BP_XRPawn.EventGraph` BeginPlay still adds `IMC_Default` (priority 0) and `IMC_Hands` (priority 0);
+  - `IMC_Default` still maps `OculusTouch_Left_Thumbstick_2D` (plus PICO/Index/Vive equivalents) to `IA_Move`;
+  - `IA_Move` `Triggered` -> `Branch(IsDead)` -> `ApplySmoothLocomotion` is still connected;
+  - `BP_TutorialManager.ShowTutorial` still adds `IMC_Menu` at priority **-1**, so the tutorial context no longer steals the thumbsticks (that fix survived).
+- Real cause: the 2026-07-31 floor-anchor fix was **not in the asset any more**. `ApplySmoothLocomotion` node `K2Node_CallFunction_38` (`MakeVector` feeding the trace anchor) was back at `Z = 90.0`, matching the pre-fix state. `AI_MEMORY.md` had likewise lost its five newest entries in the working copy, and `BP_XRPawn.uasset` matched commit `1553b62` (before the fix commit `08b68d1`, which only ever committed the memory file, never the binary asset). So a rollback/merge dropped the asset-side change while the commit message survived.
+- With `Z = 90` and `CapsuleTraceByChannel HalfHeight = 90`, the trace capsule's bottom sits exactly on the floor plane -> every step on flat ground reports blocked -> movement diverts into the 45 cm step-climb path -> `StepClimbAccum` grows by the per-frame distance until `InRange(0, 50)` rejects it, after which the movement branch does nothing at all. Roughly half a second of walking, then permanent stop (and the pawn is left floating up to ~50 cm above the floor, since nothing pulls it back down).
+- Fix 1: `K2Node_CallFunction_38.Z = 90.0 -> 100.0` (10 cm clearance instead of the untested 5 cm). That anchored vector only feeds trace start/end points, never `AddActorWorldOffset`, so it cannot make the player float. Cost: obstacles under 10 cm are no longer detected as walls.
+- Fix 2 (frame-rate independence): the movement delta was `direction * 1 cm per frame` — `ClampVectorSize(dir, 0, DeltaSeconds / 0.00333)` only ever *capped* the vector, and `dir` is at most length 1, so the clamp never applied and speed scaled with FPS (about 90 cm/s at 90 fps, 72 cm/s at 72 fps, and a crawl whenever the Quest drops frames).
+  - Added `Lerp(Vector)` node `K2Node_CallFunction_60`: `A = (0,0,0)`, `B` = the direction sum (`K2Node_PromotableOperator_6`), `Alpha` = the existing `SafeDivide` output. `Lerp(0, dir, a) = dir * a`, so the delta is now `dir * DeltaSeconds * speed`.
+  - `SafeDivide` (`K2Node_CallFunction_31`) `B` pin `0.003333333333 -> 0.01`, i.e. **speed = 100 cm/s**, and its output still feeds `ClampVectorSize.Max` so diagonals cannot exceed that speed. To retune speed, set that pin to `1 / desired_cm_per_second`.
+- `BP_XRPawn` compiled with warnings treated as errors and saved; `L_Dungeon` PIE started clean with no new `Blueprint Runtime Error`, `Accessed None`, `Broken Reference`, or compile error.
+- Still unverified live: MCP cannot inject a VR thumbstick axis and has no console-exec/function-call tool, so the actual walk test needs the headset.
+### Follow-up the same session: stair-climb logic removed entirely (user request)
+
+- User asked to delete the stair-climbing logic, so `ApplySmoothLocomotion` no longer has a climb path at all. Deleted 19 nodes:
+  - elevated `+45 cm` probe: `MakeTransform_15`, `TransformLocation_16/17`, `CapsuleTraceByChannel_18`, `Branch_5`;
+  - climb accumulation: `MakeVector_42/43`, `GetStepClimbAccum_2`, `MakeTransform_44`, `TransformLocation_45`, `BreakVector_46`, `InRange_47`, `Branch_6`, `SetStepClimbAccum_2`, `SetStepClimbAccum_3`;
+  - climb movement: `MakeVector_19`, `MakeTransform_20`, `TransformLocation_21`, `AddActorWorldOffset_13`.
+- Rewired `Branch_4` (body capsule trace result) `else` -> `AddActorWorldOffset_30` directly. Flow is now: floor line trace -> body capsule trace -> clear = move horizontally + footstep sounds, blocked = do nothing.
+- Removed the now-unused member variable `StepClimbAccum` after confirming it appeared in no other graph (checked `EventGraph`, `UserConstructionScript`, `SnapTurn`, and all four teleport graphs).
+- Consequence to keep in mind: the pawn is now confined to whatever is walkable at the trace height. Any obstacle taller than the 10 cm anchor clearance blocks movement outright, so **walking up the dungeon stairs is no longer possible**. If stair traversal is wanted later, do not restore this design — implement the standard order instead: move horizontally first, then trace down and snap the pawn to the floor with a max step height. That also fixes the missing descent/gravity.
+- Compiled with warnings as errors, saved, and `L_Dungeon` PIE ran clean (no `Blueprint Runtime Error`, `Accessed None`, `Broken Reference`, or compile error).
+
+### Follow-up 2 the same session: block only at torso height, ignore everything low
+
+- User's own diagnosis was correct: with the anchor at `floor + 100` and trace `HalfHeight = 90`, the blocking capsule spanned `floor + 10 .. floor + 190`, so every low lip, threshold, prop, and uneven floor patch between 10 cm and knee height registered as a wall and stopped movement outright (there is no climb path left to rescue it).
+- Raised the bottom of the blocking capsule instead of widening it:
+  - anchor `MakeVector_38.Z` `100 -> 120`;
+  - `CapsuleTraceByChannel_9.HalfHeight` `90 -> 70` (must stay above `Radius = 40` or Unreal clamps it).
+  - The capsule now spans `floor + 50 .. floor + 190`: same head-height top, but the lowest 50 cm is no longer tested. `Radius = 40` unchanged.
+- To retune the ignore height H later, keep `anchorZ - HalfHeight = H` and `anchorZ + HalfHeight = 190`, i.e. `anchorZ = (190 + H) / 2`, `HalfHeight = (190 - H) / 2`. Note `HalfHeight` can never go below `Radius` (40) — Unreal clamps it — so with `Radius = 40` the highest reachable ignore height is `H = 110`.
+- Raised again later the same session (user still got stuck on floor obstacles after the sword fix): anchor `120 -> 150`, `HalfHeight` `70 -> 40`. The check is now effectively a **sphere of radius 40 centred at floor + 150**, i.e. it only tests `floor + 110 .. floor + 190` (chest to head height). Everything below 110 cm is walked straight through. To go lower than `H = 110`, `Radius` must be reduced first.
+- Consequence: anything shorter than 50 cm is walked through (clipping), including low guard walls — and since the pawn has no gravity, it can walk out over an open edge and simply hover there. Full-height walls still block normally.
+- Compiled with warnings as errors, saved, and `L_Dungeon` PIE ran clean.
+
+### Follow-up 3 the same session: the actual dominant cause was the player's own sword blocking the movement trace
+
+- User's observation cracked it: in `L_Test`, after raising the player height, the left stick moved them **only while the sword was held out to the left**. That is a moving obstruction attached to the player, not level geometry.
+- Verified chain:
+  - `BP_XRPawn` has a `ChildActorComponent` named `EquippedSword` (`ChildActorClass = BP_Sword_C`), parented to the **`HandRight`** component, relative location `(35, 19, -5)`.
+  - At runtime it spawns a **separate actor** (`EquippedSword_GEN_VARIABLE_BP_Sword_C_CAT_0`) whose root `KRYVEN_BLADE` is attached to `BP_XRPawn_C_0.EquippedSword`.
+  - `BP_Sword.KRYVEN_BLADE` uses collision profile **`BlockAllDynamic`** with `QueryAndPhysics`, so it **blocks the Visibility channel**. (`SwordCollision` is `OverlapAllDynamic` and is not the problem.)
+  - The movement check is `CapsuleTraceByChannel` on `TraceTypeQuery1` (Visibility) with `bIgnoreSelf = true`. **`bIgnoreSelf` ignores only the pawn actor itself — never its child/attached actors.** So whenever the blade sat inside the swept body capsule, every frame reported "blocked" and movement died; swinging the sword clear of the capsule restored it.
+- Fix: added a pure `GetAttachedActors` node (`K2Node_CallFunction_13`, `bRecursivelyIncludeAttachedActors = true`, self = the pawn) and wired its `OutActors` into `ActorsToIgnore` on **both** traces — the body `CapsuleTraceByChannel_9` and the floor `LineTraceByChannel_48` (the floor trace could otherwise sample the blade and report a wrong floor height).
+- `GetAttachedActors` covers the child-actor sword and anything grabbed and attached to a hand later, so grabbed weapons will not reintroduce this.
+- Compiled with warnings as errors, saved, and `L_Test` PIE ran clean.
+- Lesson for any future trace-based movement/interaction in this project: `bIgnoreSelf` is not enough on a pawn that carries child actors. Always feed `GetAttachedActors` into `ActorsToIgnore`.
+
+### Follow-up 4 the same session: cannot leave the starting hall through the opened tutorial door
+
+- Symptom: on the headset the tutorial door visibly opens but the player still cannot walk out. Movement works fine elsewhere in the hall.
+- Ruled out by measurement in `L_Dungeon`:
+  - `BP_TutorialDoor.EventGraph` calls `OpenDoor` straight from **BeginPlay**, so the door is always open — it is not a gating problem.
+  - `OpenDoor` runs two `MoveComponentTo` calls with `TargetRelativeRotation = (Pitch ∓100, 0, 0)`. That is a **pitch** rotation, so the two leaves tip over drawbridge-style instead of swinging: verified at runtime, the leaf settles at `(-80, 180, -180)` (the normalized form of pitch -100) and the actor bounds grow to `Y[-3893, -3333]`, `Z` down to `-576`. The leaves end up lying flat at roughly floor level (top ≈ world `-474`), not blocking anything at body height. Ugly but harmless.
+  - `SM_DoorWay`'s collision is many convex hulls, not one filled box. The opening is clear for `Y ∈ (-113, +113)` (226 cm wide) from local `Z = 7` up to local `Z ≈ 252`; the arch hulls start at local `Z = 252`. With the door at world `Z = -500`, the **free passage is world `-493 .. -248`** and the arch collision begins at world `-248`.
+  - An overlap query (`SceneTools.find_actors` with `bounds` + `collision_channels`) inside the opening at chest height returns no static geometry once the leaves are open — in both the editor world and, during PIE, the PIE world. Note `find_actors` targets the PIE world while PIE runs, whereas `SceneTools.trace_world` hit nothing even against a closed door, so **trace_world is not usable for this kind of check; use the bounds overlap form of find_actors instead.**
+- Actual cause — the floor line trace is too short, and only fails on a real headset:
+  - `PlayerStart_0` is at `Z = -400` while the hall floor is at `Z = -500`, so the pawn root (`VROrigin`) floats **100 cm above the floor** (a PlayerStart is normally placed with its capsule resting on the floor, but this VR pawn uses that location for its floor-level origin).
+  - `PlayerBodyCollision` is attached to `Camera` at relative `(0, 0, -10)`, so its height follows the HMD. In PIE with no headset the camera sits at the origin (`world -400`, body `-410`), the trace `body ± 200` reaches the floor, and everything looks correct — which is why this never reproduced in PIE.
+  - In the headset the camera rises to about `world -250..-220` (origin `-400` + real standing height), so the trace spanned only about `-50 .. -450` and **never reached the floor at `-500`**. `SelectFloat` then fell back to `GetActorLocation.Z = -400`, so the anchor became `-250` and the whole collision check sat at `-290 .. -210`, i.e. **210–290 cm above the real floor — right inside the doorway arch collision that starts at `-248`.** Open floor space has nothing at that height, so only the doorway blocked.
+- Fix: floor-trace end `MakeVector_54.Z` `-200 -> -1000`, so the downward trace always reaches the floor regardless of HMD height or how high the pawn origin sits. The anchor then resolves to the true floor and the check band returns to `floor + 110 .. floor + 190`, which fits inside the doorway's free `-493 .. -248` span.
+- Compiled with warnings as errors, saved, `L_Dungeon` PIE clean.
+- Follow-up: the user reported the door still could not be passed, so at their request `PlayerStart_0` was moved **past the door** in `/Game/Maps/L_Dungeon`: `(3050, -4050, -400)` -> **`(3150, -3300, -508)`**, yaw 90 unchanged. That spot is 300 cm beyond the doorway, clear of the fallen door leaves (they reach `y = -3333`), verified empty at body height, floor measured at `-508.27`, and the nearest goblin is at `y = -3000`. `Z = -508` puts the pawn origin **on the floor** instead of the old 100 cm float, so the player's viewpoint is also a metre lower than before. `L_Dungeon` was saved. To undo, restore the old transform.
+### Follow-up 5 the same session: two PlayerStarts, spawn height raised, and sword hitting enemies 15 m away
+
+- **`L_Dungeon` has TWO PlayerStart actors**: `PlayerStart` and `PlayerStart_0`, originally at `(3150, -4050, -400)` and `(3050, -4050, -400)`. Moving only `PlayerStart_0` looked like it worked in one PIE run and then silently spawned at the old spot in the next, because `ChoosePlayerStart` alternates between them by occupancy. `SceneTools.find_actors` with `name: "playerstart"` only matches labels without the space — **always search PlayerStarts by `actor_type` (`/Script/Engine.PlayerStart`), not by name.** Both are now at `(3150, -3300, -468)`, yaw 90.
+- Spawn height: `-508` (exactly on the floor) felt too low to the user, so both starts are at `Z = -468`, i.e. **40 cm above the floor** (the original was 100 cm above). Since the fixed floor trace derives the collision band from the detected floor, raising the origin no longer affects movement — it only changes viewpoint height. One number to tune.
+- **Sword damaging distant enemies — root cause found.** `BP_Goblin`, `BP_Enemy`, and `BP_Boss` each carry a `SenseSphere` with **`SphereRadius = 1500`**, profile `OverlapAllDynamic`, `bGenerateOverlapEvents = true`. `BP_Sword.SwordCollision` was also `OverlapAllDynamic`, and `BP_Sword.EventGraph`'s `OnComponentBeginOverlap(SwordCollision)` passes only `OtherActor` into `TrySwordDamage` — **`OtherComp` is discarded**. So swinging anywhere within 15 m of an enemy overlapped that enemy's perception sphere and dealt a full hit to an enemy across the room.
+- Fix: `BP_Sword.SwordCollision` collision profile `OverlapAllDynamic -> OverlapOnlyPawn`, with the response array written explicitly (`Pawn`/`Vehicle` Overlap, everything else Ignore) because setting only `collisionProfileName` through `ObjectTools.set_properties` does **not** re-resolve the preset's response table — always write the responses too, then read back.
+- Why real hits still land: all three enemies' `CollisionCylinder` are `ECC_Pawn` with a `WorldDynamic -> Overlap` override, and the sword box is `WorldDynamic`, so capsule hits still generate overlap events. Player self-hits are still filtered by the existing `CastToBP_XRPawn` guard.
+- Fixing this on the sword rather than on each enemy's sphere means any future enemy with an oversized volume is covered too. The remaining latent weakness: `TrySwordDamage` still ignores `OtherComp`, so any *Pawn-channel* oversized volume would reintroduce the bug.
+- `BP_Sword` compiled with warnings as errors; `BP_Sword` and `L_Dungeon` saved; PIE spawns at `(3150, -3300, -468)` with no runtime errors.
+
+- Still outstanding (reported to the user, not changed): the starting hall itself is now skipped, and if the door needs to work later the arch-height issue must be re-tested on the headset. The old note that `PlayerStart_0.Z` should be `-500` rather than `-400` otherwise the player's viewpoint is a metre higher than intended for the whole game. With this fix it no longer breaks movement, it only affects perceived height.
+- The door leaves tipping over on `Pitch` instead of swinging on `Yaw` is also still unfixed — cosmetic only.
+
+- Standing risk: `BP_XRPawn.uasset` is binary + Git LFS. Whenever a branch merge or rollback touches it, Blueprint fixes silently disappear while their commits (which only carried `AI_MEMORY.md`) remain in the log. **Commit the `.uasset` in the same commit as the fix**, and after any merge re-read the pin values before assuming a fix is present.
+
 ## 2026-07-31 Floor-anchor clearance in ApplySmoothLocomotion
 
 - Symptom: smooth locomotion worked at first and then stopped completely after roughly a second of walking.
