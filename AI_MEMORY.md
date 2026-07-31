@@ -1,5 +1,35 @@
 # AI Memory
 
+## 2026-07-31 CRITICAL tooling lesson: `set_pin_value` does not dirty the package, and a duplicate editor blocks saves
+
+- Two `UnrealEditor.exe` processes had the project open at once (PIDs 1796 and 23880, started 9 seconds apart). The first one holds the `.uasset` file handles, so the second one's saves fail with **Error 32 (sharing violation)**: `MoveFile was unable to move ... .uasset to Saved/*.tmp` -> `Error saving`. `AssetTools.save_assets` returned **false** in that case.
+- Identify which editor hosts MCP by grepping `Saved/Logs/*.log` for `LogModelContextProtocol` and for your own most recent action (for example `Compiling Blueprint`). The first-started editor writes `dy.log`, the second writes `dy_2.log`. Kill the *other* one; killing the MCP host loses every unsaved change.
+- Far worse and silent: **`BlueprintTools.set_pin_value` alone does not mark the Blueprint package dirty.** `is_dirty` stays false, `save_assets` then no-ops and still returns **true**, and re-reading the pin confirms the new value because the read comes from editor memory, not from disk. Several "fixed and saved" changes therefore never reached the file and were never in the commits:
+  - collision band raise (anchor `120`/`150`, `HalfHeight` `70`/`40`),
+  - floor-trace reach `-1000`,
+  - and this session's trace-start `0` and speed `0.00625`.
+  The user kept reporting the same bugs because their build genuinely never contained the fixes.
+- `compile_blueprint` does not dirty it either. **`set_node_position` does.** Workflow to use from now on: after any pin-only edit, call `set_node_position` on one node (or make some structural edit), then `is_dirty` -> expect true, then `save_assets`, then verify on disk with the file mtime and `git status`. **Never treat a pin read-back as proof the change was saved.**
+
+## 2026-07-31 Boss engaged, roared and showed its HP bar from game start
+
+- Reported: boss sound audible from spawn with the boss nowhere in sight, and the boss HP bar up from the start.
+- Causes found in `BP_Boss`:
+  - `EventGraph` BeginPlay ran, after the widget setup, `SetTimer(CheckPlayerDistance, 0.2s, looping)` -> `SetTimer(CastFireball, 10s, looping)` -> `SetTimer(IdleFlourish)` -> **`CastFireball()` immediately** -> **`OnSenseBeginOverlap(GetPlayerPawn)` immediately** -> `CastToBP_XRPawn` -> **`ShowBossHealthHUD(1.0)`**. So the boss target-locked the player, threw a fireball and lit the HUD bar at t=0.
+  - `IdleFlourish` plays `Rampage_Effort_Ability_Ultimate_Grow` through **`PlaySound2D` with `bIsUISound = true`** every 6-12 s while `State == "Idle"`. That node is completely non-spatialised, and the cue itself has `AttenuationSettings: None`, so the roar is heard at full volume anywhere on the map. `PlaySoundAtLocation` would not have fixed it on its own.
+- Fixes:
+  - BeginPlay now ends at `SetTimer(CheckPlayerDistance)` -> `SetTimer(IdleFlourish)`. The immediate `CastFireball` node was deleted.
+  - Engagement now runs only through the existing `CheckPlayerDistance` custom event (0.2 s timer, condition `State == "Idle" AND distance <= SenseRadius`), whose `OnSenseBeginOverlap` call was wired onward to the existing `CastToBP_XRPawn` -> `ShowBossHealthHUD(1.0)` -> `SetTimer(CastFireball, 10s, looping)` chain. So HP bar, fireballs and aggro all start together when the player closes to 15 m.
+  - `IdleFlourish` got a `Distance(Vector)` + `InRange(Float) 0..2500` branch in front of the `PlaySound2D`, so the idle roar only plays within 25 m; the false branch still reschedules the timer.
+- **Do not wire `OnComponentBeginOverlap(SenseSphere)` to the engage path.** It was tried and produced a burst of `Accessed None: SelfPawn` errors in `ChaseTick` / `PlayApproachAnimation` at level load: the sphere is `OverlapAllDynamic` so it overlaps the dungeon's static geometry immediately, and it fires **before** BeginPlay's `Delay` node has run `SetSelfPawn`. The distance-timer path has no such ordering problem. After removing that wiring the PIE run was clean.
+
+## 2026-07-31 Movement stopped intermittently because the floor trace hit the ceiling
+
+- Reported: walking forward works, then suddenly no amount of stick input moves the player.
+- The floor line trace started at **body + 200 cm**. The corridor ceiling underside (`SM_Crypt_Ceiling13`) is at world `-246` with the floor at `-508`, so with the body around `-313` on a headset the trace started at `-113`, i.e. **inside the ceiling mesh**, and the first downward hit was the ceiling instead of the floor. `floorZ` then resolved to about `-246`, the anchor to `-96`, and the whole collision check sat inside solid rock -> permanently blocked. Ceilinged versus open stretches explain the on/off behaviour.
+- Fix: floor-trace start offset `MakeVector_53.Z` `200 -> 0`, so the trace begins at the body and always looks downward at floor geometry only.
+- Walk speed raised at the same time: `SafeDivide` B pin `0.01 -> 0.00625`, i.e. 100 -> **160 cm/s**.
+
 ## 2026-07-31 Left-stick movement dead again — floor-anchor fix had been rolled back
 
 - Symptom reported: left thumbstick no longer moves the player forward/back/left/right.
