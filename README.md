@@ -9,6 +9,22 @@ Meta Quest 3 스탠드얼론 VR 판타지 액션 데모. 검과 화염구로 웨
 - Unreal Engine 5.8
 - OpenXR 런타임 (Oculus/Meta, Quest Link 또는 Air Link)
 - Meta Quest 3 (또는 PC VR Preview로 대체 실행)
+- **Paragon: Rampage 에셋 (별도 설치 필요)** — 아래 [외부 에셋 안내](#외부-에셋-안내) 참고
+
+## 외부 에셋 안내
+
+몰입캠프 종료 후 아카이브 용량 정리를 위해, Epic Games가 Fab에서 무료로 배포하는 Paragon 에셋 2종을 커밋 기록 전체에서 제거했다 (2026-11, 몰입캠프 운영진). 프로젝트 코드·블루프린트와 그 외 에셋, 커밋 기록은 그대로 유지된다.
+
+| 에셋 | 원래 위치 | 사용처 |
+|---|---|---|
+| [Paragon: Rampage](https://www.fab.com/search?q=Paragon%3A%20Rampage) | `Content/ParagonRampage/` | 최종 보스 `BP_Boss` (메시·스켈레톤·애니메이션·공격 이펙트), `BP_BossFireball` (머티리얼 `M_FA_Bubble_Inst`) |
+| Paragon: Greystone | `Content/ParagonGreystone/` | 사용처 없음 (임포트만 되어 있었음) — 설치 불필요 |
+
+### 복원 방법
+
+1. Fab에서 **Paragon: Rampage**를 내 라이브러리에 추가한다.
+2. Epic Games Launcher → Unreal Engine → 라이브러리 → Fab 라이브러리에서 Paragon: Rampage를 이 프로젝트(`dy`)에 **프로젝트에 추가**한다. `Content/ParagonRampage/`에 설치되어야 기존 참조가 그대로 연결된다.
+3. 설치하지 않고 열면 `BP_Boss`, `BP_BossFireball`에서 누락 에셋 참조 경고가 표시되고 보스가 정상적으로 보이지 않는다.
 
 ## Quick Start
 
